@@ -1,0 +1,32 @@
+import { chromium } from '/opt/npm-tools/node_modules/playwright/index.mjs';
+import assert from 'node:assert/strict';
+const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });
+const ctx = await browser.newContext({ viewport: { width: 1300, height: 900 }, locale: 'uk-UA', timezoneId: 'Europe/Zurich', acceptDownloads: true });
+const p = await ctx.newPage(); const errors = [];
+p.on('pageerror', e => errors.push(e.message + e.stack));
+await p.goto('http://localhost:8123/#/settings'); await p.waitForTimeout(500);
+await p.click('[data-go="import"]'); await p.waitForTimeout(300);
+await p.setInputFiles('.modal input[type=file]', 'tests/google-export.zip'); await p.waitForTimeout(500);
+await p.selectOption('.imp-cal[data-i="0"] [data-subj]', 'new');
+await p.screenshot({ path: 'tests/shot-import.png' });
+await p.click('[data-run]'); await p.waitForTimeout(800);
+const list = await p.evaluate(() => window.__plan.store.entries().map(e => ({ t: e.title, d: e.date, time: e.time, end: e.end, rep: e.repeat, loc: e.location, subj: e.subject && window.__plan.store.subjectById(e.subject).name })));
+console.log(JSON.stringify(list));
+const la = list.find(e => e.t === 'Лінійна алгебра');
+assert.equal(la.time, '08:30'); assert.equal(la.end, '09:50'); assert.deepEqual(la.rep.days, [2, 4]); assert.equal(la.loc, 'Корпус 7, ауд. 301'); assert.equal(la.subj, 'Розклад КПІ');
+assert.ok(!list.find(e => e.t === 'Минулорічне'));
+assert.equal(list.find(e => e.t === 'Спортзал').time, '18:00');
+// Повторний імпорт не дублює
+await p.click('[data-act="search"]'); await p.keyboard.type('імпорт'); await p.keyboard.press('Enter'); await p.waitForTimeout(300);
+await p.setInputFiles('.modal input[type=file]', 'tests/google-export.zip'); await p.waitForTimeout(400);
+await p.click('[data-run]'); await p.waitForTimeout(500);
+assert.equal(await p.evaluate(() => window.__plan.store.entries().length), list.length);
+await p.screenshot({ path: 'tests/shot-after-import.png' });
+// Експорт
+await p.goto('http://localhost:8123/#/settings'); await p.waitForTimeout(300);
+await p.click('[data-go="export"]'); await p.waitForTimeout(200);
+const [dl] = await Promise.all([p.waitForEvent('download'), p.click('.modal [data-run]')]);
+const path = await dl.path(); const txt = (await import('node:fs')).readFileSync(path, 'utf8');
+assert.ok(txt.includes('RRULE:FREQ=WEEKLY;BYDAY=TU,TH;UNTIL=')); console.log('export file:', dl.suggestedFilename(), txt.length, 'bytes');
+console.log(errors.join('\n') || 'no page errors');
+await browser.close();

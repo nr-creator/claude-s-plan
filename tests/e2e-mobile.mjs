@@ -1,0 +1,47 @@
+import { chromium } from '/opt/npm-tools/node_modules/playwright/index.mjs';
+const url = 'http://localhost:8123/';
+const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });
+const errors = [];
+const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2, locale: 'uk-UA', timezoneId: 'Europe/Zurich' });
+const p = await ctx.newPage();
+p.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') errors.push(`${m.type()}: ${m.text()}`); });
+p.on('pageerror', e => errors.push(`pageerror: ${e.message}\n${e.stack}`));
+await p.goto(url); await p.waitForTimeout(700);
+// Дані
+await p.evaluate(async () => {
+  const s = window.__plan.store;
+  const m = await s.createSubject({ name: 'Матаналіз', color: 'blue', room: '214' });
+  const f = await s.createSubject({ name: 'Фізика', color: 'orange' });
+  const today = new Date(); const ymd = d => d.toISOString().slice(0, 10);
+  await s.createEntry({ title: 'Лекція', date: '2026-09-01', time: '08:30', end: '09:50', repeat: { freq: 'weekly', days: [1, 3, 5] }, subject: m.id, location: 'ауд. 214' });
+  await s.createEntry({ title: 'Практика', date: '2026-09-01', time: '10:10', end: '11:30', repeat: { freq: 'weekly', days: [2, 4] }, subject: f.id });
+  await s.createEntry({ title: 'Здати ДЗ 3', date: '2026-11-17', task: true, subject: m.id });
+  await s.createEntry({ title: 'Зустріч з науковим', date: '2026-11-14', time: '19:00', end: '20:00' });
+  await s.createEntry({ title: 'Ідеї для курсової', body: '- тема 1\n- тема 2' });
+});
+await p.waitForTimeout(400);
+await p.screenshot({ path: 'tests/m-1-today.png' });
+await p.fill('.qa-in', 'пт 15:00 #фіз лаба'); await p.waitForTimeout(150);
+await p.screenshot({ path: 'tests/m-2-qa.png' });
+await p.press('.qa-in', 'Enter'); await p.waitForTimeout(300);
+await p.click('.tabs [data-nav="cal"]'); await p.waitForTimeout(500);
+await p.screenshot({ path: 'tests/m-3-week.png' });
+await p.click('[data-view="month"]'); await p.waitForTimeout(400);
+await p.screenshot({ path: 'tests/m-4-month.png' });
+await p.click('.tabs [data-nav="subjects"]'); await p.waitForTimeout(300);
+await p.screenshot({ path: 'tests/m-5-subjects.png' });
+await p.click('.subj-card'); await p.waitForTimeout(300);
+await p.screenshot({ path: 'tests/m-6-subject.png' });
+// відкрити заняття → конспект
+await p.click('.tabs [data-nav="today"]'); await p.waitForTimeout(300);
+await p.click('.next-card .btn'); await p.waitForTimeout(500);
+await p.keyboard.type('Тема: границі'); await p.keyboard.press('Enter'); await p.keyboard.type('- означення');
+await p.waitForTimeout(600);
+await p.screenshot({ path: 'tests/m-7-classnote.png' });
+await p.goBack(); await p.waitForTimeout(400);
+console.log('class notes:', await p.evaluate(() => window.__plan.store.entries().filter(e => e.parent).map(e => e.title + ' | ' + e.occurrence + ' | ' + e.body)));
+await p.click('.tabs [data-act="search"]'); await p.waitForTimeout(200);
+await p.keyboard.type('границ'); await p.waitForTimeout(200);
+await p.screenshot({ path: 'tests/m-8-search.png' });
+console.log(errors.join('\n') || 'no console errors');
+await browser.close();

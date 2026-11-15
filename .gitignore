@@ -1,0 +1,5 @@
+tests/*.png
+tests/*.json
+tests/*.svg
+!tests/fixture.zip
+node_modules/

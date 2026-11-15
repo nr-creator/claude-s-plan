@@ -1,0 +1,27 @@
+import { chromium } from '/opt/npm-tools/node_modules/playwright/index.mjs';
+const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });
+const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: 'dark', locale: 'en-GB', timezoneId: 'Europe/Zurich' });
+const p = await ctx.newPage(); const errors = [];
+p.on('pageerror', e => errors.push(e.message));
+await p.goto('http://localhost:8123/'); await p.waitForTimeout(500);
+await p.evaluate(async () => {
+  const s = window.__plan.store; localStorage.setItem('plan.welcomed', '1');
+  const m = await s.createSubject({ name: 'Calculus', color: 'blue', teacher: 'Dr. Koval', room: '214' });
+  const f = await s.createSubject({ name: 'Physics', color: 'orange' });
+  const a = await s.createSubject({ name: 'Algorithms', color: 'green' });
+  await s.createEntry({ title: 'Lecture', date: '2026-09-01', time: '08:30', end: '09:50', repeat: { freq: 'weekly', days: [1, 3, 5] }, subject: m.id, location: 'room 214' });
+  await s.createEntry({ title: 'Lab', date: '2026-09-01', time: '10:10', end: '11:30', repeat: { freq: 'weekly', days: [2, 4] }, subject: f.id });
+  await s.createEntry({ title: 'Seminar', date: '2026-09-01', time: '12:00', end: '13:20', repeat: { freq: 'weekly', days: [3] }, subject: a.id });
+  await s.createEntry({ title: 'Problem set 4', date: '2026-11-18', task: true, subject: m.id });
+  await s.createEntry({ title: 'Gym', date: '2026-11-17', time: '18:00', end: '19:30' });
+  await s.createEntry({ title: 'Coffee with Ola', date: '2026-11-19', time: '12:30', end: '13:30' });
+  await s.createEntry({ title: 'Lecture 7: Integrals', subject: m.id, body: '# Riemann sums\n\nThe integral $\\int_a^b f(x)\\,dx$ is the limit of sums.\n\n$$\n\\int_a^b f(x)\\,dx = \\lim_{n \\to \\infty} \\sum_{i=1}^{n} f(x_i^*)\\,\\Delta x\n$$\n\n> [!tip] Draw the rectangles first.\n\n- [x] read chapter 5\n- [ ] exercises 1–12\n\n| Function | Antiderivative |\n| --- | --- |\n| $x^n$ | $\\frac{x^{n+1}}{n+1}$ |\n| $e^x$ | $e^x$ |' });
+  s.saveSettings({ lang: 'en' });
+});
+await p.goto('http://localhost:8123/#/cal/week/2026-11-16'); await p.reload(); await p.waitForTimeout(700);
+await p.screenshot({ path: 'tests/d-week.png' });
+await p.goto('http://localhost:8123/#/notes'); await p.waitForTimeout(400);
+await p.click('.note-card'); await p.waitForTimeout(600);
+await p.screenshot({ path: 'tests/d-note.png' });
+console.log(errors.join('\n') || 'no page errors');
+await browser.close();
