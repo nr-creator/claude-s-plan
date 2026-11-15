@@ -99,13 +99,18 @@ export function openPalette(ctx, initial = '') {
     } else {
       const p = parseQuick(q, { today: todayYmd() });
       if (p.date && !p.title) items.push({ type: 'date', d: p.date });
+      if (q.startsWith('#')) {
+        const tq = norm(q.slice(1));
+        items.push(...ctx.allTags().filter(x => norm(x.key).startsWith(tq)).slice(0, 5).map(x => ({ type: 'tag', tag: x })));
+      }
+      items.push(...store.folders().filter(f => nq && norm(f.name).includes(nq)).slice(0, 4).map(f => ({ type: 'folder', f })));
       items.push(...store.subjects({ withArchived: true }).filter(s => norm(s.name).includes(nq)).slice(0, 4).map(s => ({ type: 'subj', s })));
       items.push(...search(q, 20).map(r => ({ type: 'entry', e: r.e, snippet: r.snippet })));
       items.push(...commands().filter(c => norm(c.l).includes(nq)).map(c => ({ type: 'cmd', c })));
     }
     act = Math.min(act, Math.max(0, items.length - 1));
     let html = '', lastType = null;
-    const head = { entry: t('search.entries'), subj: t('search.subjects'), cmd: t('search.commands') };
+    const head = { entry: t('search.entries'), subj: t('search.subjects'), cmd: t('search.commands'), tag: t('notes.tags'), folder: t('search.folders') };
     items.forEach((it, i) => {
       if (it.type !== lastType && head[it.type]) html += `<div class="pal-h">${esc(head[it.type])}</div>`;
       lastType = it.type;
@@ -115,6 +120,8 @@ export function openPalette(ctx, initial = '') {
         const meta = [it.e.date ? (it.e.repeat ? t('entry.repeat') : shortDate(it.e.date)) : '', s ? s.name : ''].filter(Boolean).join(' · ');
         html += `<button class="${cls}" data-i="${i}">${icon(it.e.task ? 'todo' : it.e.date && !it.e.body ? 'calendar' : 'notes')}<span class="pal-main"><span class="pal-t">${highlight(it.e.title || t('entry.untitled'), q)}</span>${it.snippet ? `<span class="pal-s">${highlight(it.snippet, q)}</span>` : ''}</span>${meta ? `<span class="pal-m">${s ? `<i class="dot" style="--c:${cvar(s.color)}"></i>` : ''}${esc(meta)}</span>` : ''}</button>`;
       } else if (it.type === 'subj') html += `<button class="${cls}" data-i="${i}"><i class="dot lg" style="--c:${cvar(it.s.color)}"></i><span class="pal-main"><span class="pal-t">${highlight(it.s.name, q)}</span></span></button>`;
+      else if (it.type === 'tag') html += `<button class="${cls}" data-i="${i}">${icon('hash')}<span class="pal-main"><span class="pal-t">${esc(t('search.tagNotes', { t: it.tag.label }))}</span></span><span class="pal-m">${it.tag.n}</span></button>`;
+      else if (it.type === 'folder') html += `<button class="${cls}" data-i="${i}">${icon('folder')}<span class="pal-main"><span class="pal-t">${highlight(it.f.name, q)}</span><span class="pal-s">${esc(store.folderPath(it.f.id).map(x => x.name).join(' / '))}</span></span></button>`;
       else if (it.type === 'date') html += `<button class="${cls}" data-i="${i}">${icon('calendar')}<span class="pal-main"><span class="pal-t">${esc(t('search.goto', { d: dayLabel(it.d) }))}</span></span></button>`;
       else html += `<button class="${cls}" data-i="${i}">${icon(it.c.i)}<span class="pal-main"><span class="pal-t">${highlight(it.c.l, q)}</span></span>${it.c.k ? `<kbd>${it.c.k}</kbd>` : ''}</button>`;
     });
@@ -127,6 +134,8 @@ export function openPalette(ctx, initial = '') {
     if (it.type === 'entry') ctx.open(openKey(it.e), { push: true });
     if (it.type === 'subj') ctx.go('#/subject/' + it.s.id);
     if (it.type === 'date') ctx.go('#/cal/day/' + it.d);
+    if (it.type === 'tag') ctx.showTag(it.tag.key);
+    if (it.type === 'folder') ctx.showFolder(it.f.id);
     if (it.type === 'cmd') it.c.run();
   };
   const key = e => {
@@ -142,5 +151,5 @@ export function openPalette(ctx, initial = '') {
   wrap.addEventListener('pointerdown', e => { if (e.target === wrap) close(); });
   const x = $('[data-x]', wrap); if (x) x.onclick = close;
   draw();
-  setTimeout(() => { inp.focus(); inp.select(); }, 0);
+  inp.focus(); inp.select();
 }

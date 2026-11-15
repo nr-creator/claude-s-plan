@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { parseBlocks, serializeBlocks, parseInline, inlineToHtml, plainText, escInline } from '../js/md.js';
+import { parseBlocks, serializeBlocks, parseInline, inlineToHtml, plainText, escInline, extractTags as m_extract } from '../js/md.js';
 import { renderTex } from '../js/math.js';
 
 let n = 0; const ok = (name, fn) => { try { fn(); n++; } catch (e) { console.error('FAIL', name); throw e; } };
@@ -100,5 +100,11 @@ ok('math', () => {
   assert.ok(renderTex('\\lim_{x \\to 0} \\frac{\\sin x}{x}', true).includes('<munder><mi>lim</mi>'), renderTex('\\lim_{x \\to 0} \\frac{\\sin x}{x}', true));
   assert.ok(renderTex('\\foo').includes('merror'));
   assert.ok(renderTex('\\begin{cases} x & x>0 \\\\ -x & \\text{інакше} \\end{cases}').includes('<mtext>інакше</mtext>'));
+});
+ok('tags', () => {
+  const { extractTags } = { extractTags: m_extract };
+  assert.deepEqual(extractTags('Т #Ідея', 'текст #ідея і #лаби/2\n\n```\n#код\n```\n\n# Заголовок\n\nзадача #3').map(x => x.key), ['ідея', 'лаби/2']);
+  assert.ok(inlineToHtml('a #тег').includes('class="htag"'));
+  assert.equal(serializeBlocks(parseBlocks('#тег на початку рядка')), '#тег на початку рядка');
 });
 console.log('md ok:', n);

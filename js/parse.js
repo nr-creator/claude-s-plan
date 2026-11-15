@@ -137,19 +137,24 @@ export function parseQuick(text, ctx = {}) {
     Object.assign(res, val);
   };
 
-  // Предмет: #тег
-  if (!ignore.has('subject')) {
-    const m = /#([\p{L}\p{N}_\-.+]+)/u.exec(masked);
-    if (m) {
-      const tag = m[1].replace(/[.]+$/, '');
-      const key = norm(tag).replace(/[\s_\-.]/g, '');
-      const named = subjects.map(s => ({ s, k: norm(s.name).replace(/[\s_\-.]/g, '') }));
-      let hit = named.find(x => x.k === key);
+  // Предмет: #назва існуючого предмета. Решта #слів — звичайні хештеги, вони лишаються в тексті.
+  res.tags = [];
+  const tagRe = /(^|[\s(,;])#([\p{L}\p{N}][\p{L}\p{N}_\-./+]*)/gu;
+  let tm;
+  const named = subjects.map(s => ({ s, k: norm(s.name).replace(/[\s_\-.]/g, '') }));
+  while ((tm = tagRe.exec(masked))) {
+    const tag = tm[2].replace(/[.\-_/]+$/, '');
+    if (!/\p{L}/u.test(tag)) continue;
+    const key = norm(tag).replace(/[\s_\-.]/g, '');
+    let hit = null;
+    if (!ignore.has('subject') && !res.subject) {
+      hit = named.find(x => x.k === key);
       if (!hit) { const pre = named.filter(x => x.k.startsWith(key)); if (pre.length === 1) hit = pre[0]; }
       if (!hit) { const inc = named.filter(x => key.length >= 3 && x.k.includes(key)); if (inc.length === 1) hit = inc[0]; }
-      const val = hit ? { subject: { id: hit.s.id, name: hit.s.name } } : { subject: { newName: tag.replace(/_/g, ' ').replace(/^./u, c => c.toUpperCase()) } };
-      take('subject', [m[0]], val, m.index);
     }
+    const idx = tm.index + tm[1].length;
+    if (hit) take('subject', ['#' + tm[2]], { subject: { id: hit.s.id, name: hit.s.name } }, idx);
+    else res.tags.push(tag);
   }
   const seen = new Set();
   for (const mt of matchers(today)) {

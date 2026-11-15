@@ -7,7 +7,7 @@ import { parse, serialize, canon } from './format.js';
 import { merge3 } from './merge.js';
 import { gitBlobSha, utf8, fromUtf8, b64ToBytes, bytesToB64, deepEqual, uid, nowISO } from './util.js';
 
-const KINDS = [['entries/', 'entry', /^entries\/([\w-]+)\.md$/], ['subjects/', 'subject', /^subjects\/([\w-]+)\.md$/], ['assets/', 'asset', /^assets\/([\w-]+)\.(\w+)$/]];
+const KINDS = [['entries/', 'entry', /^entries\/([\w-]+)\.md$/], ['subjects/', 'subject', /^subjects\/([\w-]+)\.md$/], ['folders/', 'folder', /^folders\/([\w-]+)\.md$/], ['assets/', 'asset', /^assets\/([\w-]+)\.(\w+)$/]];
 const kindOf = path => { for (const [, k, re] of KINDS) { const m = re.exec(path); if (m) return { kind: k, id: m[1], ext: m[2] }; } return null; };
 const MIME = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml' };
 
@@ -83,7 +83,7 @@ async function getHead(sp) {
   } catch (e) {
     // Порожній репозиторій: створюємо перший коміт з README
     if (e instanceof GhError && (e.status === 409 || (e.status === 404 && /empty/i.test(e.message)))) {
-      const readme = '# Дані застосунку «План»\n\nТут лежать записи (entries/), предмети (subjects/) і зображення (assets/).\nКожен запис — окремий Markdown-файл. Редагувати можна й вручну.\n';
+      const readme = '# Дані застосунку «План»\n\nТут лежать записи (entries/), предмети (subjects/), папки (folders/) і зображення (assets/).\nКожен запис — окремий Markdown-файл. Редагувати можна й вручну.\n';
       await api.putFile(r, 'README.md', bytesToB64(utf8(readme)), 'Ініціалізація');
       const ref = await api.ref(r); const c = await api.commit(r, ref.object.sha);
       return { sha: ref.object.sha, tree: c.tree.sha };

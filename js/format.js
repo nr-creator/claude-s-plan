@@ -1,7 +1,7 @@
 // Запис ⇄ текст файлу: Markdown з короткою шапкою між рядками "---".
 // Шапка — прості пари "ключ: значення". Складні значення пишуться як JSON, тому парсер простий і надійний.
 
-const ORDER = ['id', 'title', 'date', 'endDate', 'time', 'end', 'task', 'done', 'doneDates', 'subject', 'repeat', 'exdates',
+const ORDER = ['id', 'title', 'date', 'endDate', 'time', 'end', 'task', 'done', 'doneDates', 'subject', 'folder', 'repeat', 'exdates',
   'parent', 'occurrence', 'pinned', 'location', 'name', 'color', 'teacher', 'room', 'link', 'archived', 'order',
   'icsUid', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy', 'deletedAt'];
 

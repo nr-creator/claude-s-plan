@@ -5,6 +5,7 @@ import { t, fmtDate, relTime } from '../i18n.js';
 import { createEditor } from '../editor.js';
 import { describeRepeat } from '../recur.js';
 import { wikiTargets } from '../md.js';
+import { tagsOf, allTags, folderPrompt } from './notes.js';
 import { isoDow, todayYmd, addDays, debounce, timeToMin, minToTime, norm } from '../util.js';
 import { esc, icon, h, $, $$, popover, menu, pickDate, toast, confirmBox, cvar, COLORS, spaceLabel, shortDate, dayLabel, isNarrow, locale } from '../ui.js';
 import { compressImage } from '../image.js';
@@ -18,6 +19,7 @@ export function openPanel(host, key, ctx) {
   let editor = null;
   let note = isOcc ? findClassNote(e, occ) : null;
   let creatingNote = null;
+  let titleSave = null;
   const el = h('<div class="pn"></div>');
   host.innerHTML = ''; host.appendChild(el);
 
@@ -54,7 +56,7 @@ export function openPanel(host, key, ctx) {
       </div></div>`;
     const title = $('.pn-title', el);
     if (title) {
-      const save = debounce(v => store.updateEntry(spaceId, id, { title: v }, { silent: false }), 400);
+      const save = titleSave = debounce(v => store.updateEntry(spaceId, id, { title: v }, { silent: false }), 400);
       const grow = () => { title.style.height = 'auto'; title.style.height = title.scrollHeight + 'px'; };
       title.addEventListener('input', () => { grow(); save(title.value); });
       title.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); save.flush(title.value); editor && editor.focus(); } if (ev.key === 'ArrowDown' && title.selectionStart === title.value.length) { ev.preventDefault(); editor && editor.focus(); } });
@@ -92,6 +94,8 @@ export function openPanel(host, key, ctx) {
         return store.entries().filter(x => x.id !== id && (!nq || norm(x.title).includes(nq))).sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || '')).slice(0, 8).map(x => ({ id: x.id, title: x.title, space: x.space }));
       },
       createNote: async title => { const n = await store.createEntry({ title, subject: e.subject }, e.space); return { id: n.id, title }; },
+      tagList: () => allTags(),
+      openTag: tag => ctx.showTag(tag),
       openWiki: wid => { const x = store.findEntry(wid); if (x) ctx.open(`${x.space}|${x.id}`, { push: true }); },
       addImage: async file => { const { bytes, ext, mime } = await compressImage(file); return store.addAsset((target() || e).space, bytes, ext, mime); },
       imageURL: ref => store.assetURL((target() || e).space, ref),
@@ -110,6 +114,7 @@ export function openPanel(host, key, ctx) {
       e.date ? chip('repeat', 'repeat', e.repeat ? describeRepeat(e.repeat, t, locale()) : t('entry.noRepeat'), !!e.repeat) : '',
       `<button class="prop ${s ? 'on subj' : ''}" data-prop="subject" ${s ? `style="--c:${cvar(s.color)}"` : ''}>${s ? '<i class="dot"></i>' : icon('book')}<span>${esc(s ? s.name : t('entry.noSubject'))}</span></button>`,
       store.spaces.length > 1 ? chip('space', sp && sp.kind === 'shared' ? 'users' : 'lock', spaceLabel(sp), true) : '',
+      (() => { const f = store.folderById(e.folder); return chip('folder', 'folder', f ? store.folderPath(f.id).map(x => x.name).join(' / ') : t('entry.noFolder'), !!f); })(),
       chip('location', 'location', e.location || t('entry.location'), !!e.location),
     ];
     return out.join('');
@@ -120,7 +125,8 @@ export function openPanel(host, key, ctx) {
     const cur = target() || e;
     const back = store.entries().filter(x => x.body && wikiTargets(x.body).includes(cur.id));
     const words = editor ? editor.words() : 0;
-    f.innerHTML = `<div class="pn-meta"><span>${esc(t('entry.words', { n: words }))}</span>${cur.updatedAt ? `<span>${esc(t('entry.updated', { d: relTime(cur.updatedAt) }))}${cur.updatedBy ? ' ' + esc(t('entry.by', { u: cur.updatedBy })) : ''}</span>` : ''}</div>
+    const tags = tagsOf(cur);
+    f.innerHTML = `${tags.length ? `<div class="pn-tags">${tags.map(x => `<button class="tagchip" data-tag="${esc(x.key)}">#${esc(x.label)}</button>`).join('')}</div>` : ''}<div class="pn-meta"><span>${esc(t('entry.words', { n: words }))}</span>${cur.updatedAt ? `<span>${esc(t('entry.updated', { d: relTime(cur.updatedAt) }))}${cur.updatedBy ? ' ' + esc(t('entry.by', { u: cur.updatedBy })) : ''}</span>` : ''}</div>
       ${back.length ? `<div class="backlinks"><h5>${icon('backlink')}${t('entry.backlinks')}</h5>${back.map(x => `<button class="link-row" data-open="${esc(x.space + '|' + x.id)}">${icon('notes')}${esc(x.title || t('entry.untitled'))}</button>`).join('')}</div>` : ''}`;
   }
   function outline() {
@@ -146,6 +152,18 @@ export function openPanel(host, key, ctx) {
     if (k === 'repeat') repeatMenu(btn, e, upd);
     if (k === 'subject') subjectMenu(btn, e, upd);
     if (k === 'space') spaceMenu(btn, e);
+    if (k === 'folder') {
+      const fs = store.folders();
+      const depth = f => store.folderPath(f.id).length - 1;
+      const ordered = []; const walk = p => fs.filter(f => (f.parent || null) === p).forEach(f => { ordered.push(f); walk(f.id); }); walk(null);
+      fs.forEach(f => { if (!ordered.includes(f)) ordered.push(f); });
+      menu(btn, [
+        { label: t('entry.noFolder'), icon: 'inbox', active: !e.folder, act: () => upd({ folder: null }) },
+        ...ordered.map(f => ({ label: '\u2003'.repeat(depth(f)) + f.name, icon: 'folder', active: e.folder === f.id, act: () => upd({ folder: f.id }) })),
+        '-',
+        { label: t('folder.new'), icon: 'plus', act: () => folderPrompt(btn, null, null, ctx, f => upd({ folder: f.id })) },
+      ]);
+    }
     if (k === 'location') {
       const box = h(`<form class="pop-form"><input value="${esc(e.location || '')}" placeholder="${esc(t('entry.location'))}"><button class="btn primary sm">${t('misc.ok')}</button></form>`);
       const p = popover(btn, box); const inp = $('input', box); setTimeout(() => inp.focus(), 0);
@@ -272,6 +290,7 @@ export function openPanel(host, key, ctx) {
     const p = ev.target.closest('[data-prop]'); if (p) { prop(p.dataset.prop, p); return; }
     const tb = ev.target.closest('[data-tab]'); if (tb && isOcc) { editor && editor.flush(); tab = tb.dataset.tab; draw(); return; }
     const hd = ev.target.closest('[data-hd]'); if (hd && editor) { editor.scrollTo(hd.dataset.hd); return; }
+    const tg = ev.target.closest('.tagchip[data-tag]'); if (tg) { ctx.showTag(tg.dataset.tag); return; }
   });
 
   draw();
@@ -296,10 +315,11 @@ export function openPanel(host, key, ctx) {
       footer(); outline();
     },
     close() {
+      if (titleSave) { const ti = $('.pn-title', el); const cur = store.entry(spaceId, id); titleSave.cancel(); if (ti && cur && ti.value !== (cur.title || '')) store.updateEntry(spaceId, id, { title: ti.value }); }
       if (editor) { editor.flush(); editor.destroy(); editor = null; }
+      // Порожній запис (без назви, тексту, дати) не залишаємо, хоч би як він з'явився
       const fresh = store.entry(spaceId, id);
-      // Порожній новий запис не залишаємо
-      if (fresh && !fresh.title && !fresh.body && !fresh.date && !fresh.parent && ctx.isNew) store.purgeEntry(spaceId, id);
+      if (store.isBlank(fresh)) store.purgeEntry(spaceId, id);
     },
     focusTitle() { const ti = $('.pn-title', el); ti && ti.focus(); },
   };

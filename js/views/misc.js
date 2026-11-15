@@ -36,6 +36,7 @@ export async function renderConflicts(el, st, ctx) {
       const c = list.find(x => x.id === r.dataset.crestore); if (!c || !c.other) return;
       const { updatedAt, updatedBy, ...data } = c.other;
       if (c.kind === 'subject') await store.updateSubject(c.space, c.recId, data);
+      else if (c.kind === 'folder') await store.updateFolder(c.space, c.recId, data);
       else if (store.entry(c.space, c.recId)) await store.updateEntry(c.space, c.recId, data);
       else await store.createEntry({ ...data }, c.space);
       await sync.dismissConflict(c.id); toast(t('conf.restored')); ctx.rerender();

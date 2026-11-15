@@ -27,7 +27,8 @@ ok('weekly що що', () => { const r = P('щопн щср 8:30 пара'); ass
 ok('weekly multi', () => { const r = P('по пн, ср 10:00 англ'); assert.deepEqual(r.repeat.days, [1, 3]); assert.equal(r.title, 'англ'); });
 ok("п'ятниця", () => { assert.equal(P("в п'ятницю кіно").date, '2026-11-20'); assert.equal(P('у п’ятницю кіно').title, 'кіно'); });
 ok('next', () => { assert.equal(P('наступної суботи похід').date, '2026-11-21'); assert.equal(P('сб похід').date, today); });
-ok('new subject', () => { const r = P('#хімія_орг лаба'); assert.equal(r.subject.newName, 'Хімія орг'); });
+ok('unknown # is a hashtag', () => { const r = P('#хімія_орг лаба #ідея'); assert.equal(r.subject, undefined); assert.equal(r.title, '#хімія_орг лаба #ідея'); assert.deepEqual(r.tags, ['хімія_орг', 'ідея']); });
+ok('subject + tag', () => { const r = P('завтра #матан #важливо конспект'); assert.equal(r.subject.id, 's1'); assert.equal(r.title, '#важливо конспект'); assert.deepEqual(r.tags, ['важливо']); });
 ok('subject substring', () => { assert.equal(P('#алгебра конспект').subject.id, 's3'); });
 ok('task', () => { const r = P('! здати лабу пт'); assert.equal(r.task, true); assert.equal(r.title, 'здати лабу'); assert.equal(P('дедлайн курсової 1.12').task, true); });
 ok('ignore', () => { const r = P('завтра зранку', ['date']); assert.equal(r.date, undefined); assert.equal(r.title, 'завтра зранку'); });

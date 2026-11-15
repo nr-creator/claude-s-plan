@@ -111,6 +111,14 @@ await step('image asset syncs to friend', async () => {
   const w = await E(B, u => new Promise(r => { const i = new Image(); i.onload = () => r(i.naturalWidth); i.onerror = () => r(-1); i.src = u; }), u);
   assert.equal(w, 1);
 });
+await step('folders sync and survive deletion', async () => {
+  const fid = await E(A1, async () => { const s = window.__plan.store; const f = await s.createFolder({ name: 'Університет' }, 'local'); const sub = await s.createFolder({ name: 'Матаналіз', parent: f.id }, 'local'); return sub.id; });
+  await E(A1, ({ id, fid }) => window.__plan.store.updateEntry('local', id, { folder: fid }), { id: X, fid });
+  await sync(A1); await sync(A2);
+  assert.ok(files('artem/plan-data')[`folders/${fid}.md`].includes('Матаналіз'));
+  const f2 = await E(A2, id => { const s = window.__plan.store; const e = s.entry('local', id); return s.folderPath(e.folder).map(f => f.name).join('/'); }, X);
+  assert.equal(f2, 'Університет/Матаналіз');
+});
 await step('history of an entry', async () => {
   const h = await E(A1, id => window.__plan.sync.history('local', `entries/${id}.md`), X);
   assert.ok(h.length >= 4, 'history ' + h.length);

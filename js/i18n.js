@@ -1,6 +1,14 @@
 // Дві мови інтерфейсу. t('ключ', {параметри}). Множина: форми через "|" (uk — 3 форми, en — 2), параметр n.
 const uk = {
   'app.name': 'План',
+  'notes.unfiled': 'Без папки', 'notes.folders': 'Папки', 'notes.tags': 'Теги', 'notes.filter': 'Фільтр', 'notes.sort': 'Сортування',
+  'notes.grid': 'Картки', 'notes.list': 'Список', 'notes.sortCreated': 'Нещодавно створені', 'notes.tagEmpty': 'Нотаток із цим тегом немає.',
+  'folder.new': 'Нова папка', 'folder.empty': 'Папка порожня. Створи нотатку тут або перетягни сюди наявну.',
+  'folder.moved': 'Перенесено в «{f}»', 'folder.movedOut': 'Прибрано з папки', 'folder.name': 'Назва папки', 'folder.create': 'Створити',
+  'folder.newSub': 'Нова підпапка', 'folder.rename': 'Перейменувати', 'folder.moveTo': 'Перемістити в…', 'folder.root': 'Верхній рівень',
+  'folder.delete': 'Видалити папку', 'folder.deleteConfirm': 'Видалити папку «{f}»? Нотатки й підпапки з неї перейдуть на рівень вище.',
+  'entry.folder': 'Папка', 'entry.noFolder': 'Без папки', 'entry.tags': 'Теги',
+  'search.tagNotes': 'Нотатки з #{t}', 'search.folders': 'Папки', 'ed.tagHint': 'Тег', 'ed.tagNew': 'Новий тег #{t}',
   'look.title': 'Вигляд', 'look.presets': 'Готові теми', 'look.presetsHelp': 'Обери тему як основу, а нижче підлаштуй будь-яку деталь. Зміни застосовуються одразу.',
   'look.preset.standard': 'Стандарт', 'look.preset.minimal': 'Мінімал', 'look.preset.midnight': 'Північ', 'look.preset.warm': 'Теплий', 'look.preset.oled': 'OLED', 'look.preset.contrast': 'Контраст',
   'look.colors': 'Кольори', 'look.mode': 'Тема', 'look.tint': 'Тон фону', 'look.tintHint': 'Відтінок сірих поверхонь',
@@ -56,7 +64,7 @@ const uk = {
   'rep.weeklyOn': 'Щотижня: {days}', 'rep.everyNWeeksOn': 'Кожні {n} тиж.: {days}', 'rep.until': 'до {date}', 'rep.count': '({n} раз.)',
   'rep.interval': 'Кожні', 'rep.days': 'Дні', 'rep.untilLabel': 'До дати', 'rep.biweekly': 'Через тиждень', 'rep.custom': 'Інше…',
   'dow.short.1': 'Пн', 'dow.short.2': 'Вт', 'dow.short.3': 'Ср', 'dow.short.4': 'Чт', 'dow.short.5': 'Пт', 'dow.short.6': 'Сб', 'dow.short.7': 'Нд',
-  'notes.title': 'Нотатки', 'notes.new': 'Нова нотатка', 'notes.empty': 'Тут з’являться нотатки без дати й конспекти. Створіть першу кнопкою вище.',
+  'notes.title': 'Нотатки', 'notes.new': 'Нова нотатка', 'notes.empty': 'Тут з’являться нотатки без дати й конспекти. Створи першу кнопкою вище.',
   'notes.all': 'Усі', 'notes.pinned': 'Закріплені', 'notes.recent': 'Нещодавні', 'notes.classNotes': 'Конспекти занять', 'notes.loose': 'Без предмета',
   'notes.sortUpdated': 'Нещодавно змінені', 'notes.sortTitle': 'За назвою',
   'subj.title': 'Предмети', 'subj.new': 'Новий предмет', 'subj.name': 'Назва предмета', 'subj.color': 'Колір', 'subj.teacher': 'Викладач',
@@ -139,6 +147,14 @@ const uk = {
 
 const en = {
   'app.name': 'Plan',
+  'notes.unfiled': 'Unfiled', 'notes.folders': 'Folders', 'notes.tags': 'Tags', 'notes.filter': 'Filter', 'notes.sort': 'Sort',
+  'notes.grid': 'Cards', 'notes.list': 'List', 'notes.sortCreated': 'Recently created', 'notes.tagEmpty': 'No notes with this tag.',
+  'folder.new': 'New folder', 'folder.empty': 'This folder is empty. Create a note here or drag one in.',
+  'folder.moved': 'Moved to “{f}”', 'folder.movedOut': 'Removed from folder', 'folder.name': 'Folder name', 'folder.create': 'Create',
+  'folder.newSub': 'New subfolder', 'folder.rename': 'Rename', 'folder.moveTo': 'Move to…', 'folder.root': 'Top level',
+  'folder.delete': 'Delete folder', 'folder.deleteConfirm': 'Delete folder “{f}”? Its notes and subfolders move up one level.',
+  'entry.folder': 'Folder', 'entry.noFolder': 'No folder', 'entry.tags': 'Tags',
+  'search.tagNotes': 'Notes tagged #{t}', 'search.folders': 'Folders', 'ed.tagHint': 'Tag', 'ed.tagNew': 'New tag #{t}',
   'look.title': 'Appearance', 'look.presets': 'Themes', 'look.presetsHelp': 'Pick a theme as a base, then fine-tune any detail below. Changes apply instantly.',
   'look.preset.standard': 'Standard', 'look.preset.minimal': 'Minimal', 'look.preset.midnight': 'Midnight', 'look.preset.warm': 'Warm', 'look.preset.oled': 'OLED', 'look.preset.contrast': 'Contrast',
   'look.colors': 'Colors', 'look.mode': 'Theme', 'look.tint': 'Background tone', 'look.tintHint': 'Tint of the grey surfaces',

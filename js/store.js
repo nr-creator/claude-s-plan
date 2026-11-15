@@ -58,7 +58,7 @@ export function toggleSpaceVisible(id) {
 
 // ---- Записи ----
 export const keyOf = (spaceId, path) => `${spaceId}/${path}`;
-export const pathFor = (kind, id, ext) => kind === 'entry' ? `entries/${id}.md` : kind === 'subject' ? `subjects/${id}.md` : `assets/${id}.${ext}`;
+export const pathFor = (kind, id, ext) => kind === 'entry' ? `entries/${id}.md` : kind === 'subject' ? `subjects/${id}.md` : kind === 'folder' ? `folders/${id}.md` : `assets/${id}.${ext}`;
 export const allRecs = () => recs.values();
 export const getRec = key => recs.get(key);
 export const recFor = (spaceId, kind, id) => {
@@ -168,6 +168,58 @@ export async function updateSubject(spaceId, id, patch) {
 }
 export async function deleteSubject(spaceId, id) {
   await updateSubject(spaceId, id, { deletedAt: nowISO() });
+}
+
+// ---- Папки нотаток (окремо від предметів; можуть бути вкладеними) ----
+export async function createFolder(fields, spaceId = personalSpace().id) {
+  const data = stamp(spaceId, { id: uid(), name: '', parent: null, ...fields }, true);
+  await writeRec(spaceId, 'folder', data);
+  return { ...canon(data), space: spaceId };
+}
+export async function updateFolder(spaceId, id, patch) {
+  const r = recFor(spaceId, 'folder', id); if (!r) return;
+  const data = stamp(spaceId, { ...r.data, ...patch }, false);
+  await writeRec(spaceId, 'folder', data);
+}
+// Видалення папки: нотатки і підпапки піднімаються на рівень вище, нічого не губиться
+export async function deleteFolder(spaceId, id) {
+  const f = folderById(id); if (!f) return;
+  for (const e of entries({ all: true })) if (e.folder === id) await updateEntry(e.space, e.id, { folder: f.parent || null }, { silent: true });
+  for (const c of folders()) if (c.parent === id) await updateFolder(c.space, c.id, { parent: f.parent || null });
+  await updateFolder(spaceId, id, { deletedAt: nowISO() });
+}
+export function folders() {
+  if (cache.f) return cache.f;
+  const out = [];
+  for (const r of recs.values()) {
+    if (r.kind !== 'folder' || r.purge || r.data.deletedAt || !space(r.space)) continue;
+    out.push({ ...r.data, space: r.space });
+  }
+  out.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.name || '').localeCompare(b.name || ''));
+  return (cache.f = out);
+}
+export const folderById = id => id ? folders().find(f => f.id === id) : null;
+// Ланцюжок від кореня до папки (для «хлібних крихт»)
+export function folderPath(id) {
+  const out = []; let f = folderById(id), guard = 0;
+  while (f && guard++ < 50) { out.unshift(f); f = folderById(f.parent); }
+  return out;
+}
+// Чи є папка a предком папки b (щоб не вкласти папку саму в себе)
+export function isAncestor(a, b) { let f = folderById(b), guard = 0; while (f && guard++ < 50) { if (f.parent === a) return true; f = folderById(f.parent); } return false; }
+
+// ---- Порожні записи ----
+// Порожній = без назви, без тексту, без дати, не задача і не конспект заняття. Такі прибираємо автоматично.
+export const isBlank = e => !!e && !(e.title || '').trim() && !(e.body || '').replace(/&nbsp;/g, '').trim() && !e.date && !e.task && !e.parent && !e.pinned;
+export async function purgeBlank(exceptKey) {
+  let n = 0;
+  for (const r of [...recs.values()]) {
+    if (r.kind !== 'entry' || r.purge || r.data.deletedAt || !isBlank(r.data)) continue;
+    if (exceptKey && exceptKey === `${r.space}|${r.data.id}`) continue;
+    await purgeRec(r, true); n++;
+  }
+  if (n) bump({ blank: n });
+  return n;
 }
 
 // ---- Зображення ----

@@ -58,11 +58,12 @@ export function mountQuickAdd(host, ctx) {
         if (c.kind === 'task') { label = t('qa.task'); ic = 'todo'; }
         if (c.kind === 'subject') {
           const s = c.subject.id && store.subjectById(c.subject.id);
-          chips.push(`<button type="button" class="chip on subj" data-ign="subject" title="${esc(t('qa.chip.remove'))}" ${s ? `style="--c:${cvar(s.color)}"` : ''}><i class="dot"></i>${esc(c.subject.name || c.subject.newName)}${c.subject.newName ? ` <em>· ${t('qa.newSubject')}</em>` : ''}</button>`);
+          chips.push(`<button type="button" class="chip on subj" data-ign="subject" title="${esc(t('qa.chip.remove'))}" ${s ? `style="--c:${cvar(s.color)}"` : ''}><i class="dot"></i>${esc(c.subject.name)}</button>`);
           continue;
         }
         chips.push(`<button type="button" class="chip on" data-ign="${c.kind}" title="${esc(t('qa.chip.remove'))}">${icon(ic)}${esc(label)}</button>`);
       }
+      for (const tg of parsed.tags || []) chips.push(`<span class="chip tagchip">#${esc(tg)}</span>`);
       if (!parsed.chips.some(c => c.kind === 'date') && parsed.date && !(preset && preset.date)) chips.unshift(`<span class="chip ghost">${icon('calendar')}${esc(dayLabel(parsed.date, 'short'))}</span>`);
     }
     const ts = targets();
@@ -91,7 +92,7 @@ export function mountQuickAdd(host, ctx) {
     let sid = spaceId || defaultTarget();
     if (p.subject) {
       if (p.subject.id) fields.subject = p.subject.id;
-      else { const s = await store.createSubject({ name: p.subject.newName }, sid); fields.subject = s.id; toast(t('subj.created', { s: s.name })); }
+
     } else if (base.subject) fields.subject = base.subject;
     if (!fields.date) { fields.time = null; fields.end = null; }
     const e = await store.createEntry(fields, sid);

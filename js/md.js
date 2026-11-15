@@ -177,6 +177,14 @@ export function parseInline(s) {
       const j = findClose('*', i + 1);
       if (j > i + 1) { flush(); out.push({ t: 'i', c: parseInline(s.slice(i + 1, j)) }); i = j + 1; continue; }
     }
+    // Хештег: «#слово» на початку слова, має містити хоч одну літеру (#3 — не тег)
+    if (ch === '#' && (i === 0 || /[\s(\[{,;:]/.test(s[i - 1]))) {
+      const m = /^#([\p{L}\p{N}][\p{L}\p{N}_\-/]*)/u.exec(s.slice(i));
+      if (m && /\p{L}/u.test(m[1])) {
+        const v = m[1].replace(/[-_/]+$/, '');
+        flush(); out.push({ t: 'tag', v }); i += 1 + v.length; continue;
+      }
+    }
     if (s.startsWith('[[', i)) {
       const j = s.indexOf(']]', i + 2);
       if (j > i + 2) { flush(); const inner = s.slice(i + 2, j); const k = inner.lastIndexOf('|'); out.push({ t: 'wiki', title: k >= 0 ? inner.slice(0, k) : inner, id: k >= 0 ? inner.slice(k + 1) : '' }); i = j + 2; continue; }
@@ -213,6 +221,7 @@ export function nodesToHtml(nodes, opts = {}) {
       case 's': return `<s>${nodesToHtml(n.c, opts)}</s>`;
       case 'mark': return `<mark>${nodesToHtml(n.c, opts)}</mark>`;
       case 'link': return `<a href="${esc(safeHref(n.href))}" target="_blank" rel="noopener noreferrer"${n.auto ? ' data-auto="1"' : ''}>${nodesToHtml(n.c, opts)}</a>`;
+      case 'tag': return `<span class="htag" data-tag="${esc(n.v)}">#${esc(n.v)}</span>`;
       case 'wiki': {
         const title = opts.resolveWiki ? (opts.resolveWiki(n.id, n.title) || n.title) : n.title;
         return `<a class="wl" contenteditable="false" data-wiki="${esc(n.id)}" data-title="${esc(n.title)}" href="#">${esc(title)}</a>`;
@@ -222,14 +231,14 @@ export function nodesToHtml(nodes, opts = {}) {
   }).join('');
 }
 export const inlineToHtml = (s, opts) => nodesToHtml(parseInline(s || ''), opts);
-const nodesToText = nodes => nodes.map(n => n.t === 'text' || n.t === 'code' ? n.v : n.t === 'math' ? n.v : n.t === 'br' ? ' ' : n.t === 'wiki' ? n.title : n.c ? nodesToText(n.c) : '').join('');
+const nodesToText = nodes => nodes.map(n => n.t === 'text' || n.t === 'code' ? n.v : n.t === 'math' ? n.v : n.t === 'br' ? ' ' : n.t === 'wiki' ? n.title : n.t === 'tag' ? '#' + n.v : n.c ? nodesToText(n.c) : '').join('');
 export const inlineToText = s => nodesToText(parseInline(s || ''));
 
 // Екранування звичайного тексту, щоб він не став розміткою
 export const escInline = s => s.replace(/[\\`*$[\]]/g, '\\$&').replace(/~~/g, '\\~\\~').replace(/==/g, '\\=\\=');
 
 // Звичайний текст: для пошуку — увесь, для прев'ю (snippet) — без коду і формул
-const nodesToPreview = nodes => nodes.map(n => n.t === 'text' || n.t === 'code' ? n.v : n.t === 'math' ? '…' : n.t === 'br' ? ' ' : n.t === 'wiki' ? n.title : n.c ? nodesToPreview(n.c) : '').join('');
+const nodesToPreview = nodes => nodes.map(n => n.t === 'text' || n.t === 'code' ? n.v : n.t === 'math' ? '…' : n.t === 'br' ? ' ' : n.t === 'wiki' ? n.title : n.t === 'tag' ? '#' + n.v : n.c ? nodesToPreview(n.c) : '').join('');
 export function plainText(md, preview) {
   const tx = preview ? s => nodesToPreview(parseInline(s || '')) : inlineToText;
   return parseBlocks(md).map(b => b.type === 'table' ? (preview ? '' : (b.rows || []).flat().map(tx).join(' ')) : b.type === 'code' || b.type === 'math' ? (preview ? '' : b.text) : b.type === 'image' ? (b.alt || '') : tx(b.text)).filter(Boolean).join(preview ? ' · ' : ' ').replace(/\s+/g, ' ').trim();
@@ -238,3 +247,17 @@ export function plainText(md, preview) {
 // Посилання [[Назва|id]] у тексті — для зворотних посилань
 export const wikiTargets = md => [...String(md || '').matchAll(/\[\[([^\]|]*)\|([^\]]+)\]\]/g)].map(m => m[2]);
 export const headings = blocks => blocks.filter(b => /^h[123]$/.test(b.type)).map(b => ({ id: b.id, level: +b.type[1], text: inlineToText(b.text) }));
+
+// Усі хештеги тексту (назва + конспект). Ключ — у нижньому регістрі, щоб #Ідея і #ідея були одним тегом.
+function collectTags(nodes, out) { for (const n of nodes) { if (n.t === 'tag') out.push(n.v); else if (n.c) collectTags(n.c, out); } return out; }
+export function extractTags(title, body) {
+  const out = collectTags(parseInline(title || ''), []);
+  if (body && body.includes('#')) for (const b of parseBlocks(body)) {
+    if (b.type === 'code' || b.type === 'math' || b.type === 'image') continue;
+    if (b.type === 'table') (b.rows || []).flat().forEach(c => collectTags(parseInline(c), out));
+    else collectTags(parseInline(b.text || ''), out);
+  }
+  const seen = new Map();
+  for (const v of out) { const k = v.toLowerCase(); if (!seen.has(k)) seen.set(k, v); }
+  return [...seen.entries()].map(([key, label]) => ({ key, label }));
+}

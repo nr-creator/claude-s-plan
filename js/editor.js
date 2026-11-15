@@ -570,6 +570,7 @@ export function createEditor(host, opts = {}) {
       if (e.data === '-' || e.data === '`' || e.data === '$') { if (autoFence(id, tx)) return; }
       if (e.data && /[*~=`$]/.test(e.data)) autoInline(tx);
       if (e.data === '/') openSlash(id, tx);
+      if (e.data === '#' && opts.tagList) { const before = textBeforeCaret(tx); if (/(^|[\s(,;])#$/.test(before) && before.length > 1) openTags(id, tx); }
       if (e.data === '[') { const before = textBeforeCaret(tx); if (before.endsWith('[[')) { deleteBefore(tx, 2); openWiki(id, tx); } }
     }
     sync(id); typing();
@@ -760,6 +761,48 @@ export function createEditor(host, opts = {}) {
     } else insertBlocksAfter(id, [...nbs, newBlock('p', { indent: b ? b.indent || 0 : 0 })]);
   }
 
+  // ---------- підказки тегів після # ----------
+  function openTags(id, tx) {
+    const rect = caretRect();
+    const box = h('<div class="menu slash" role="listbox"></div>');
+    const p = popover(null, box, { at: { x: rect ? rect.left : 0, y: rect ? rect.bottom + 4 : 0 }, sheet: false, onClose: () => { slash = null; } });
+    let items = [], act = 0, q = '';
+    const draw = () => {
+      const qq = q.toLowerCase();
+      items = opts.tagList().filter(x => x.key.startsWith(qq) || (qq.length > 1 && x.key.includes(qq))).slice(0, 8);
+      act = Math.min(act, Math.max(0, items.length - 1));
+      if (!items.length) { box.innerHTML = q ? `<div class="menu-h">${esc(t('ed.tagNew', { t: q }))}</div>` : `<div class="menu-h">${esc(t('ed.tagHint'))}</div>`; p.place(); return; }
+      box.innerHTML = items.map((it, i) => `<button class="menu-i ${i === act ? 'act' : ''}" data-i="${i}" tabindex="-1">${icon('hash')}<span class="menu-l">${esc(it.label)}</span><span class="menu-k">${it.n}</span></button>`).join('');
+      p.place();
+    };
+    draw();
+    box.addEventListener('pointerdown', e => e.preventDefault());
+    box.addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (b) choose(items[+b.dataset.i]); });
+    const choose = it => {
+      p.close();
+      deleteBefore(tx, q.length);
+      document.execCommand('insertText', false, it.label + ' ');
+      sync(id); typing();
+    };
+    slash = {
+      key(e) {
+        if (!items.length) { if (e.key === 'Escape') { e.preventDefault(); p.close(); return true; } return false; }
+        if (e.key === 'ArrowDown') { e.preventDefault(); act = (act + 1) % items.length; draw(); return true; }
+        if (e.key === 'ArrowUp') { e.preventDefault(); act = (act - 1 + items.length) % items.length; draw(); return true; }
+        if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); choose(items[act]); return true; }
+        if (e.key === 'Escape') { e.preventDefault(); p.close(); return true; }
+        return false;
+      },
+      update() {
+        const b = textBeforeCaret(tx); const i = b.lastIndexOf('#');
+        if (i < 0) { p.close(); return; }
+        q = b.slice(i + 1);
+        if (!/^[\p{L}\p{N}_\-/]*$/u.test(q) || q.length > 40) { p.close(); return; }
+        draw();
+      },
+    };
+  }
+
   // ---------- посилання на нотатки [[ ]] ----------
   function openWiki(id, tx) {
     const sel = getSelection(); const r = sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
@@ -842,6 +885,7 @@ export function createEditor(host, opts = {}) {
     if (e.target.closest('[data-tbl]')) { e.preventDefault(); tableAdd(id, e.target.closest('[data-tbl]').dataset.tbl); return; }
     if (e.target.closest('.math-view')) { bel.classList.add('editing'); focusBlock(id, -1); return; }
     const im = e.target.closest('.im'); if (im) { e.preventDefault(); inlineMath(im.closest('.tx'), im); return; }
+    const ht = e.target.closest('.htag'); if (ht && (e.ctrlKey || e.metaKey) && opts.openTag) { e.preventDefault(); sync(id); emit.flush(); opts.openTag(ht.dataset.tag); return; }
     const wl = e.target.closest('.wl'); if (wl) { e.preventDefault(); sync(id); emit.flush(); opts.openWiki && opts.openWiki(wl.dataset.wiki, wl.dataset.title); return; }
     const a = e.target.closest('a[href]');
     if (a && (e.ctrlKey || e.metaKey || isTouch() || !a.closest('[contenteditable="true"]'))) { e.preventDefault(); window.open(a.href, '_blank', 'noopener'); return; }

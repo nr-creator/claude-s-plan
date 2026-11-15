@@ -32,6 +32,9 @@ const ctx = {
   newAt: p => { qa.preset(p); },
   keepScroll: () => {},
   newNote: () => newNote(),
+  allTags: () => notesView.allTags(),
+  showTag: key => { state.notesScope = { t: 'tag', id: String(key).toLowerCase() }; state.notesFilter = ''; closeEntryQuiet(); ctx.go('#/notes'); render(); },
+  showFolder: id => { state.notesScope = { t: 'folder', id }; state.notesFilter = ''; ctx.go('#/notes'); render(); },
   newSubject: (anchor, cb) => subjView.subjectForm(null, ctx, cb),
   newSubjectModal: () => subjView.subjectForm(null, ctx),
   syncNow: () => sync.syncAll(),
@@ -136,7 +139,7 @@ function render(routeChanged) {
   let title = '', sub = '';
   if (r === 'today') { title = t('nav.today'); sub = dayLabel(todayYmd()) === t('agenda.today') ? fmtDate(todayYmd(), { weekday: 'long', day: 'numeric', month: 'long' }) : ''; todayView.render(view); welcome(view); }
   else if (r === 'cal') { title = t('nav.calendar'); calView.render(view, state, { ...ctx, rerender: () => render() }); }
-  else if (r === 'notes') { title = t('nav.notes'); notesView.render(view, state); }
+  else if (r === 'notes') { title = t('nav.notes'); notesView.render(view, state, { ...ctx, rerender: () => render() }); }
   else if (r === 'subjects') { title = t('nav.subjects'); subjView.renderList(view, state, ctx); }
   else if (r === 'subject') { const s = store.subjectById(state.subjectId); title = s ? s.name : t('nav.subjects'); subjView.render(view, state, ctx); }
   else if (r === 'settings') { title = t('nav.settings'); setView.render(view, state, ctx); }
@@ -227,11 +230,17 @@ function closeEntry() {
   if (openedByPush) { openedByPush = false; history.back(); }
   else location.replace(pathOnly());
 }
+function closeEntryQuiet() { if (panel) { unmountPanel(); state.open = null; } }
 function reopen() { const k = state.open; unmountPanel(); if (k) mountPanel(k); }
+// Нова нотатка потрапляє туди, де ти зараз: у відкриту папку, предмет або з відкритим тегом
 async function newNote() {
-  const sid = state.route === 'subject' ? state.subjectId : (state.notesSubject && !['all', 'none'].includes(state.notesSubject) ? state.notesSubject : null);
+  const sc = state.route === 'notes' ? (state.notesScope || { t: 'all' }) : { t: 'all' };
+  const sid = state.route === 'subject' ? state.subjectId : sc.t === 'subject' ? sc.id : null;
   const s = sid && store.subjectById(sid);
-  const e = await store.createEntry({ title: '', subject: s ? s.id : null }, s ? s.space : store.personalSpace().id);
+  const f = sc.t === 'folder' ? store.folderById(sc.id) : null;
+  const tag = sc.t === 'tag' ? (notesView.allTags().find(x => x.key === sc.id) || { label: sc.id }).label : null;
+  const space = s ? s.space : f ? f.space : store.personalSpace().id;
+  const e = await store.createEntry({ title: '', subject: s ? s.id : null, folder: f ? f.id : null, body: tag ? '#' + tag : null }, space);
   openEntry(openKey(e), { isNew: true, focus: 'title' });
 }
 
@@ -397,6 +406,9 @@ async function boot() {
   addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; });
   // Перенесення налаштувань із іншого пристрою: #setup=...
   if (location.hash.startsWith('#setup=')) { const code = location.hash.slice(7); history.replaceState(null, '', location.pathname + '#/today'); (await import('./transfer.js')).importSetup(code, ctx); }
+  // Порожні нотатки, що лишилися з минулих сесій (закрита вкладка, телефон у фоні), прибираємо
+  parseHash();
+  await store.purgeBlank(state.open);
   onRoute();
   sync.start();
   serviceWorker();
