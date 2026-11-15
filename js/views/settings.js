@@ -5,7 +5,7 @@ import { t, relTime, getLang } from '../i18n.js';
 import { esc, icon, h, $, $$, modal, confirmBox, toast, cvar, spaceLabel, COLORS } from '../ui.js';
 import { GhError } from '../github.js';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';
 
 export function render(el, st, ctx) {
   const S = store.settings;
@@ -15,11 +15,8 @@ export function render(el, st, ctx) {
   let html = `<div class="settings">
     <section class="card"><h3>${t('set.look')}</h3>
       <div class="set-row"><span>${t('set.lang')}</span>${seg('lang', [['uk', 'Українська'], ['en', 'English']])}</div>
-      <div class="set-row"><span>${t('set.theme')}</span>${seg('theme', [['auto', t('set.theme.auto')], ['light', t('set.theme.light')], ['dark', t('set.theme.dark')]])}</div>
-      <div class="set-row"><span>${t('set.weekStart')}</span>${seg('weekStart', [[1, t('dow.short.1')], [7, t('dow.short.7')]])}</div>
-      <div class="set-row"><span>${t('set.noteFont')}</span>${seg('noteFont', [['sans', t('set.font.sans')], ['serif', t('set.font.serif')], ['mono', t('set.font.mono')]])}</div>
-      <div class="set-row"><span>${t('set.startHour')}</span><select data-set-sel="startHour">${Array.from({ length: 13 }, (_, i) => i + 5).map(hh => `<option value="${hh}" ${S.startHour === hh ? 'selected' : ''}>${String(hh).padStart(2, '0')}:00</option>`).join('')}</select></div>
-      <label class="set-row chk"><span>${t('set.notify')}</span><input type="checkbox" data-set-chk="notify" ${S.notify ? 'checked' : ''}></label>
+      <label class="set-row chk"><span>${t('set.notify')}</span><span class="switch"><input type="checkbox" data-set-chk="notify" ${S.notify ? 'checked' : ''}><i></i></span></label>
+      <div class="set-list"><button class="set-link" data-go="#/appearance">${icon('sun')}<span>${t('set.lookLink')}</span>${icon('right')}</button></div>
     </section>
     <section class="card"><h3>${t('set.spaces')}</h3>
       <div class="spaces">${store.spaces.map(s => spaceCard(s, stat[s.id] || {})).join('')}</div>

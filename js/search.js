@@ -85,6 +85,7 @@ export function openPalette(ctx, initial = '') {
     { l: t('cmd.trash'), i: 'trash', run: () => ctx.go('#/trash') },
     { l: t('cmd.conflicts'), i: 'alert', run: () => ctx.go('#/conflicts') },
     { l: t('cmd.theme'), i: 'moon', run: () => ctx.cycleTheme() },
+    { l: t('cmd.look'), i: 'sun', run: () => ctx.go('#/appearance') },
     { l: t('cmd.lang'), i: 'info', run: () => ctx.setLang(getLang() === 'uk' ? 'en' : 'uk') },
   ];
   const draw = () => {

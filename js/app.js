@@ -1,7 +1,7 @@
 // Оболонка застосунку: маршрути, макет, гарячі клавіші, панель запису, статус синхронізації.
 import * as store from './store.js';
 import * as sync from './sync.js';
-import { t, setLang, getLang, monthName } from './i18n.js';
+import { t, setLang, getLang, monthName, fmtDate } from './i18n.js';
 import { todayYmd, addDays, timeToMin, nowMin } from './util.js';
 import { icon } from './icons.js';
 import { $, $$, h, esc, toast, popover, menu, isNarrow, dateGrid, cvar, spaceLabel, dayLabel, closePops } from './ui.js';
@@ -15,6 +15,8 @@ import * as subjView from './views/subject.js';
 import * as setView from './views/settings.js';
 import * as misc from './views/misc.js';
 import { openPanel } from './views/entry.js';
+import * as lookView from './views/appearance.js';
+import * as theme from './theme.js';
 
 const state = { route: 'today', calView: 'week', cursor: todayYmd(), subjectId: null, notesSubject: 'all', open: null, miniCursor: todayYmd() };
 let panel = null, panelFull = false, openedByPush = false, qa = null, installPrompt = null, renderQueued = false;
@@ -35,7 +37,9 @@ const ctx = {
   syncNow: () => sync.syncAll(),
   history: e => misc.showHistory(e, { reopen: () => panel && reopen() }),
   setSetting: (k, v) => setSetting(k, v),
-  cycleTheme: () => setSetting('theme', { auto: 'light', light: 'dark', dark: 'auto' }[store.settings.theme]),
+  setLook: patch => { store.saveLook(patch); applyLook(); render(); },
+  previewLook: patch => { theme.apply({ ...store.settings.look, ...patch }); if ('hourHeight' in patch && state.route === 'cal') render(); },
+  cycleTheme: () => toggleTheme(),
   setLang: l => setSetting('lang', l),
   importIcs: async () => (await import('./views/ics-ui.js')).importDialog(ctx),
   exportIcs: async () => (await import('./views/ics-ui.js')).exportDialog(ctx),
@@ -51,7 +55,7 @@ function parseHash() {
   const parts = path.split('/').filter(Boolean);
   const q = new URLSearchParams(query || '');
   state.open = q.get('open');
-  const r = parts[0] || (isNarrow() ? 'today' : (store.settings.view === 'cal' ? 'cal' : 'today'));
+  const r = parts[0] || ({ agenda: 'today', cal: 'cal', notes: 'notes' }[store.settings.view] || 'today');
   state.route = r;
   if (r === 'cal') {
     state.calView = ['day', 'week', 'month'].includes(parts[1]) ? parts[1] : state.calView;
@@ -74,23 +78,26 @@ function shell() {
   document.body.innerHTML = `
   <div class="app">
     <aside class="rail" id="rail">
-      <div class="rail-top"><span class="brand">${logo()}<b>${t('app.name')}</b></span><button class="icon-btn" data-act="search" title="Ctrl+K" aria-label="${t('nav.search')}">${icon('search')}</button></div>
+      <div class="rail-top"><span class="brand">${logo()}<b>${t('app.name')}</b></span><button class="icon-btn sm only-wide" data-act="collapse" title="${t('top.collapse')} (Ctrl+\\)" aria-label="${t('top.collapse')}">${icon('outdent')}</button></div>
       <nav class="rail-nav">
-        <a href="#/today" data-nav="today">${icon('today')}<span>${t('nav.today')}</span></a>
+        <a href="#/today" data-nav="today">${icon('today')}<span>${t('nav.today')}</span><b class="nav-count" id="todayCount"></b></a>
         <a href="#/cal/week/${todayYmd()}" data-nav="cal">${icon('calendar')}<span>${t('nav.calendar')}</span></a>
         <a href="#/notes" data-nav="notes">${icon('notes')}<span>${t('nav.notes')}</span></a>
         <a href="#/subjects" data-nav="subjects">${icon('book')}<span>${t('nav.subjects')}</span></a>
       </nav>
       <div class="rail-mini" id="mini"></div>
-      <div class="rail-sec"><div class="rail-h"><span>${t('nav.subjects')}</span><button class="icon-btn sm" data-act="new-subject" aria-label="${t('subj.new')}">${icon('plus')}</button></div><div id="subjList" class="subj-list"></div></div>
+      <div class="rail-sec" id="subjSec"><div class="rail-h"><span>${t('nav.subjects')}</span><button class="icon-btn sm" data-act="new-subject" aria-label="${t('subj.new')}">${icon('plus')}</button></div><div id="subjList" class="subj-list"></div></div>
       <div class="rail-sec" id="spacesSec"></div>
-      <div class="rail-foot"><a href="#/settings" data-nav="settings">${icon('settings')}<span>${t('nav.settings')}</span></a><button class="sync-btn" data-act="sync" aria-label="${t('sync.now')}"></button></div>
+      <div class="rail-foot"><a href="#/appearance" data-nav="appearance">${icon('sun')}<span>${t('look.title')}</span></a><a href="#/settings" data-nav="settings">${icon('settings')}<span>${t('nav.settings')}</span></a><button class="sync-btn" data-act="sync" aria-label="${t('sync.now')}"></button></div>
     </aside>
     <main class="main" id="main">
       <header class="top">
         <button class="icon-btn only-narrow" data-act="menu" aria-label="${t('nav.more')}">${icon('menu')}</button>
-        <h1 id="title"></h1>
+        <div class="top-t"><h1 id="title"></h1><span class="top-sub" id="subtitle"></span></div>
         <span class="grow"></span>
+        <button class="search-pill only-wide" data-act="search">${icon('search')}<span>${t('top.search')}</span><kbd>Ctrl K</kbd></button>
+        <button class="btn primary only-wide" data-act="new">${icon('plus')}<span>${t('top.new')}</span></button>
+        <button class="icon-btn" data-act="theme" title="${t('top.theme')}" aria-label="${t('top.theme')}">${icon(theme.isDark(store.settings.look) ? 'sun' : 'moon')}</button>
         <button class="icon-btn only-narrow" data-act="settings" aria-label="${t('nav.settings')}">${icon('settings')}</button>
         <button class="sync-btn only-narrow" data-act="sync" aria-label="${t('sync.now')}"></button>
       </header>
@@ -107,7 +114,10 @@ function shell() {
     <button data-act="search">${icon('search')}<span>${t('nav.search')}</span></button>
   </nav>
   <div id="toasts" class="toasts"></div>`;
-  qa = mountQuickAdd($('#qaHost'), { open: (k, o) => openEntry(k, o) });
+  qa = mountQuickAdd($('#qaHost'), { open: (k, o) => openEntry(k, o), afterAdd: () => hideQa() });
+  const qh = $('#qaHost');
+  qh.addEventListener('focusout', () => setTimeout(() => { if (!qh.contains(document.activeElement)) hideQa(); }, 120));
+  qh.addEventListener('keydown', e => { if (e.key === 'Escape') hideQa(); });
 }
 const logo = () => `<svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="5" width="26" height="24" rx="6" fill="var(--accent)"/><path d="M9 3.5v5M23 3.5v5" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round"/><path d="M10 17.5l4 4 8-8.5" stroke="var(--on-accent)" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
@@ -116,23 +126,26 @@ function scheduleRender() { if (renderQueued) return; renderQueued = true; reque
 function render(routeChanged) {
   const view = $('#view');
   const grid = $('.tg-body', view);
-  if (grid && !routeChanged) state.scrollMin = grid.scrollTop / 48 * 60 + 8 / 48 * 60;
+  const hh = store.settings.look.hourHeight || 52;
+  if (grid && !routeChanged) state.scrollMin = (grid.scrollTop + 8) / hh * 60;
   else if (routeChanged) state.scrollMin = null;
   const scroll = routeChanged ? 0 : view.scrollTop;
   view.onclick = null; view.onsubmit = null; view.onchange = null;
   const r = state.route;
   document.body.dataset.route = r;
-  let title = '';
-  if (r === 'today') { title = dayLabel(todayYmd()); todayView.render(view); welcome(view); }
+  let title = '', sub = '';
+  if (r === 'today') { title = t('nav.today'); sub = dayLabel(todayYmd()) === t('agenda.today') ? fmtDate(todayYmd(), { weekday: 'long', day: 'numeric', month: 'long' }) : ''; todayView.render(view); welcome(view); }
   else if (r === 'cal') { title = t('nav.calendar'); calView.render(view, state, { ...ctx, rerender: () => render() }); }
   else if (r === 'notes') { title = t('nav.notes'); notesView.render(view, state); }
   else if (r === 'subjects') { title = t('nav.subjects'); subjView.renderList(view, state, ctx); }
   else if (r === 'subject') { const s = store.subjectById(state.subjectId); title = s ? s.name : t('nav.subjects'); subjView.render(view, state, ctx); }
   else if (r === 'settings') { title = t('nav.settings'); setView.render(view, state, ctx); }
+  else if (r === 'appearance') { title = t('look.title'); lookView.render(view, state, ctx); }
   else if (r === 'trash') { title = t('nav.trash'); misc.renderTrash(view, state, ctx); }
   else if (r === 'conflicts') { title = t('conf.title'); misc.renderConflicts(view, state, ctx); }
   else { location.replace('#/today'); return; }
   $('#title').textContent = title;
+  $('#subtitle').textContent = sub;
   document.title = `${title} · ${t('app.name')}`;
   view.scrollTop = scroll;
   $$('[data-nav]').forEach(a => a.classList.toggle('on', a.dataset.nav === (r === 'subject' ? 'subjects' : r)));
@@ -142,7 +155,12 @@ function render(routeChanged) {
 }
 
 function rail() {
+  const L = store.settings.look;
+  const today = todayYmd();
+  const cnt = itemsIn(today, today).filter(it => !it.done).length;
+  $('#todayCount').textContent = cnt || '';
   if (isNarrow() && !document.body.classList.contains('rail-open')) return;
+  $('#mini').hidden = !L.sideMini; $('#subjSec').hidden = !L.sideSubjects; $('#spacesSec').hidden = !L.sideSpaces;
   const mini = $('#mini');
   const c = state.miniCursor;
   const from = addDays(c.slice(0, 8) + '01', -7), to = addDays(c.slice(0, 8) + '01', 42);
@@ -220,19 +238,35 @@ async function newNote() {
 function setSetting(k, v) {
   store.saveSettings({ [k]: v });
   if (k === 'lang') { setLang(v); const k2 = state.open; unmountPanel(); shell(); bindShell(); render(true); if (k2) mountPanel(k2); return; }
-  if (k === 'theme') applyTheme();
+  if (k === 'weekStart' || k === 'startHour') state.scrollMin = null;
   if (k === 'notify' && v && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission();
   render();
 }
-function applyTheme() {
-  const th = store.settings.theme;
-  if (th === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = th;
-  const dark = th === 'dark' || (th === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
-  let m = $('meta[name=theme-color]'); if (m) m.content = dark ? '#16211d' : '#f3f5f8';
+function applyLook() {
+  const L = store.settings.look;
+  theme.apply(L);
+  document.body.classList.toggle('side-collapsed', !!L.sideCollapsed);
+  document.body.classList.toggle('qa-hidden', L.quickAdd === 'key');
+  const tb = $('[data-act="theme"]'); if (tb) tb.innerHTML = icon(theme.isDark(L) ? 'sun' : 'moon');
+}
+const applyTheme = applyLook;
+function toggleTheme() { ctx.setLook({ mode: theme.isDark(store.settings.look) ? 'light' : 'dark' }); }
+function showQa() { const h = $('#qaHost'); h.classList.add('show'); qa.focus(); }
+function hideQa() { const h = $('#qaHost'); if (h) h.classList.remove('show'); }
+function newMenu(anchor) {
+  menu(anchor, [
+    { label: t('new.event'), icon: 'calendar', hint: 'N', act: () => showQa() },
+    { label: t('new.note'), icon: 'notes', hint: 'Shift+N', act: () => newNote() },
+    { label: t('new.subject'), icon: 'book', act: () => subjView.subjectForm(null, ctx) },
+    '-',
+    { label: t('new.import'), icon: 'download', act: () => ctx.importIcs() },
+  ], { align: 'right' });
 }
 
 // ---------- події ----------
+let shellBound = false;
 function bindShell() {
+  if (shellBound) return; shellBound = true;
   document.body.addEventListener('click', async e => {
     const a = e.target.closest('[data-act]');
     if (a) {
@@ -243,6 +277,9 @@ function bindShell() {
       if (k === 'sync') syncPopover(a);
       if (k === 'settings') ctx.go('#/settings');
       if (k === 'menu') { document.body.classList.toggle('rail-open'); rail(); }
+      if (k === 'theme') toggleTheme();
+      if (k === 'new') newMenu(a);
+      if (k === 'collapse') ctx.setLook({ sideCollapsed: !store.settings.look.sideCollapsed });
       return;
     }
     const chk = e.target.closest('[data-check]');
@@ -275,6 +312,7 @@ function keyboard() {
   document.addEventListener('keydown', e => {
     const mod = e.ctrlKey || e.metaKey;
     if (mod && e.key.toLowerCase() === 'k') { e.preventDefault(); openPalette(ctx); return; }
+    if (mod && e.key === '\\') { e.preventDefault(); ctx.setLook({ sideCollapsed: !store.settings.look.sideCollapsed }); return; }
     const typing = e.target.closest && e.target.closest('input, textarea, select, [contenteditable="true"], [contenteditable="plaintext-only"]');
     if (e.key === 'Escape' && !e.defaultPrevented) {
       if ($('.modal-wrap, .palette-wrap, .pop')) return;
@@ -286,7 +324,7 @@ function keyboard() {
     if (e.target.closest && e.target.closest('.ed')) return;
     const k = e.key;
     if (k === '/' ) { e.preventDefault(); openPalette(ctx); }
-    else if (k === 'n' || k === 'N') { e.preventDefault(); if (e.shiftKey) newNote(); else qa.focus(); }
+    else if (k === 'n' || k === 'N') { e.preventDefault(); if (e.shiftKey) newNote(); else showQa(); }
     else if (k === 't' || k === 'T') { e.preventDefault(); ctx.go(state.route === 'cal' ? `#/cal/${state.calView}/${todayYmd()}` : '#/today'); }
     else if ('dwm'.includes(k.toLowerCase()) && k.length === 1) { e.preventDefault(); ctx.go(`#/cal/${{ d: 'day', w: 'week', m: 'month' }[k.toLowerCase()]}/${state.cursor}`); }
     else if ((k === 'ArrowLeft' || k === 'ArrowRight' || k === 'j' || k === 'k') && state.route === 'cal' && !panel) { e.preventDefault(); ctx.go(`#/cal/${state.calView}/${calView.step(state.calView, state.cursor, k === 'ArrowRight' || k === 'j' ? 1 : -1)}`, { replace: true }); }
@@ -348,7 +386,7 @@ async function boot() {
   await store.init();
   setLang(store.settings.lang);
   applyTheme();
-  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { applyLook(); if (state.route === 'appearance') render(); });
   shell(); bindShell(); keyboard(); swipes();
   addEventListener('hashchange', onRoute);
   addEventListener('resize', () => scheduleRender());

@@ -5,7 +5,7 @@ import { todayYmd, addDays, addMonths, startOfWeek, startOfMonth, timeToMin, min
 import { itemsIn, itemsOn, layoutDay, rowHtml, colorOf } from '../cal.js';
 import { esc, icon, isNarrow, fmtRange, dayLabel, $, $$ } from '../ui.js';
 
-const HH = 48; // висота години в пікселях
+let HH = 52; // висота години в пікселях (з налаштувань вигляду)
 
 function range(view, cursor) {
   const ws = store.settings.weekStart;
@@ -32,6 +32,7 @@ export function step(view, cursor, dir) {
 }
 
 export function render(el, st, ctx) {
+  HH = store.settings.look.hourHeight || 52;
   const view = st.calView, cursor = st.cursor;
   const [from, to] = range(view, cursor);
   const items = itemsIn(from, to);
@@ -41,7 +42,7 @@ export function render(el, st, ctx) {
     <h2 class="cal-title">${esc(title(view, cursor))}</h2>
     <div class="seg" role="tablist">${['day', 'week', 'month'].map(v => `<button role="tab" class="${v === view ? 'on' : ''}" data-view="${v}" title="${v[0].toUpperCase()}">${t('view.' + v)}</button>`).join('')}</div>
   </div>`;
-  el.innerHTML = bar + (view === 'month' ? monthHtml(cursor, from, items, st) : gridHtml(from, to, items));
+  el.innerHTML = bar + (view === 'month' ? monthHtml(cursor, from, items, st) : gridHtml(from, to, items, view));
   if (view !== 'month') {
     const body = $('.tg-body', el);
     const target = st.scrollMin ?? (store.settings.startHour * 60);
@@ -50,8 +51,9 @@ export function render(el, st, ctx) {
   } else bindMonth(el, ctx, st);
 }
 
-function gridHtml(from, to, items) {
-  const days = []; for (let d = from; d <= to; d = addDays(d, 1)) days.push(d);
+function gridHtml(from, to, items, view) {
+  let days = []; for (let d = from; d <= to; d = addDays(d, 1)) days.push(d);
+  if (view === 'week' && !isNarrow() && !store.settings.look.showWeekends) days = days.filter(d => isoDow(d) <= 5);
   const today = todayYmd();
   let head = '<div class="tg-head"><div class="tg-gutter"></div>';
   let all = `<div class="tg-all"><div class="tg-gutter"><span>${t('cal.allday')}</span></div>`;
@@ -84,6 +86,14 @@ function minAt(col, clientY) { const r = col.getBoundingClientRect(); return ((c
 
 function bindGrid(el, ctx) {
   const grid = $('.tg-grid', el);
+  // Ctrl + колесо: змінити висоту години
+  $('.tg-body', el).addEventListener('wheel', e => {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    const cur = store.settings.look.hourHeight || 52;
+    const next = Math.max(32, Math.min(96, cur + (e.deltaY < 0 ? 4 : -4)));
+    if (next !== cur) ctx.setLook({ hourHeight: next });
+  }, { passive: false });
   grid.addEventListener('pointerdown', e => {
     if (e.button !== 0) return;
     const evEl = e.target.closest('.ev');
@@ -162,12 +172,13 @@ function monthHtml(cursor, from, items, st) {
   const today = todayYmd();
   const narrow = isNarrow();
   const sel = st.selDay || (cursor.slice(0, 7) === today.slice(0, 7) ? today : startOfMonth(cursor));
-  let html = '<div class="mg"><div class="mg-head">';
+  const wk = store.settings.look.weekNumbers;
+  let html = `<div class="mg ${wk ? 'wk' : ''}"><div class="mg-head">${wk ? '<span></span>' : ''}`;
   for (let i = 0; i < 7; i++) html += `<span>${t('dow.short.' + (((ws - 1 + i) % 7) + 1))}</span>`;
   html += '</div><div class="mg-body">';
   let d = from;
   for (let w = 0; w < 6; w++) {
-    html += '<div class="mg-w">';
+    html += '<div class="mg-w">' + (wk ? `<span class="mg-wk">${isoWeek(d)}</span>` : '');
     for (let i = 0; i < 7; i++) {
       const list = itemsOn(d, items);
       const out = d.slice(0, 7) !== cursor.slice(0, 7);
@@ -219,4 +230,12 @@ function bindMonth(el, ctx, st) {
     await store.updateEntry(space, id, patch);
   });
   body.addEventListener('dragend', () => { dragKey = null; $$('.mg-d.drop', body).forEach(x => x.classList.remove('drop')); });
+}
+
+// Номер тижня за ISO 8601 (тиждень з понеділка, перший тиждень містить 4 січня)
+function isoWeek(ymdStr) {
+  const d = new Date(ymdStr + 'T12:00'); const day = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - day + 3);
+  const first = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d - first) / 864e5 - 3 + ((first.getDay() + 6) % 7)) / 7);
 }

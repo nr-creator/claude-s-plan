@@ -26,7 +26,7 @@ export function render(el) {
       <div class="next-l"><span class="next-k">${t('agenda.nextClass')}${when ? ' · ' + esc(when) : ''}</span>
       <span class="next-t">${esc(next.e.title || t('entry.untitled'))}</span>
       <span class="next-m">${esc(fmtRange(next.e.time, next.e.end))}${s ? ' · ' + esc(s.name) : ''}${next.e.location ? ' · ' + esc(next.e.location) : ''}</span></div>
-      ${next.e.repeat ? `<button class="btn" data-open="${esc(next.key)}" data-tab="note">${icon('notes')}${t('entry.classNote')}</button>` : ''}
+      ${next.e.repeat ? `<button class="btn" data-open="${esc(next.key)}" data-tab="note" title="${t('entry.classNote')}">${icon('notes')}<span>${t('entry.classNote')}</span></button>` : ''}
     </div>`;
   }
 

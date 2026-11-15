@@ -3,6 +3,7 @@
 import * as db from './db.js';
 import { canon } from './format.js';
 import { uid, nowISO, todayYmd, addDays, clone } from './util.js';
+import { DEFAULTS as LOOK_DEFAULTS } from './theme.js';
 
 const LS_SPACES = 'plan.spaces', LS_SETTINGS = 'plan.settings';
 const listeners = new Map();
@@ -23,8 +24,17 @@ export let spaces = [];
 
 function loadLS() {
   try { settings = { ...defaultSettings(), ...JSON.parse(localStorage.getItem(LS_SETTINGS) || '{}') }; } catch { settings = defaultSettings(); }
+  // Вигляд: окремий об'єкт; старе поле theme переносимо в look.mode
+  const look = settings.look || {};
+  if (!settings.look && settings.theme) look.mode = settings.theme;
+  settings.look = { ...LOOK_DEFAULTS, ...look };
   try { spaces = JSON.parse(localStorage.getItem(LS_SPACES) || '[]'); } catch { spaces = []; }
   if (!spaces.length) spaces = [{ id: 'local', name: '', kind: 'personal', color: 'ink', remote: null }];
+}
+export function saveLook(patch) {
+  settings.look = { ...settings.look, ...patch };
+  localStorage.setItem(LS_SETTINGS, JSON.stringify(settings));
+  emit('look', patch);
 }
 export function saveSettings(patch) {
   Object.assign(settings, patch);

@@ -1,13 +1,13 @@
 // Service Worker: зберігає файли застосунку на пристрої, щоб він відкривався без інтернету.
 // Запити до GitHub API не кешуються ніколи: дані живуть в IndexedDB.
-const VERSION = 'plan-v1.0.0';
+const VERSION = 'plan-v1.1.0';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
   'js/app.js', 'js/cal.js', 'js/db.js', 'js/editor.js', 'js/format.js', 'js/github.js', 'js/i18n.js', 'js/icons.js',
   'js/image.js', 'js/ics.js', 'js/math.js', 'js/md.js', 'js/merge.js', 'js/parse.js', 'js/qa.js', 'js/qr.js', 'js/recur.js',
-  'js/search.js', 'js/store.js', 'js/sync.js', 'js/transfer.js', 'js/ui.js', 'js/util.js', 'js/zip.js',
-  'js/views/calendar.js', 'js/views/entry.js', 'js/views/ics-ui.js', 'js/views/misc.js', 'js/views/notes.js',
+  'js/search.js', 'js/store.js', 'js/sync.js', 'js/theme.js', 'js/transfer.js', 'js/ui.js', 'js/util.js', 'js/zip.js',
+  'js/views/appearance.js', 'js/views/calendar.js', 'js/views/entry.js', 'js/views/ics-ui.js', 'js/views/misc.js', 'js/views/notes.js',
   'js/views/settings.js', 'js/views/subject.js', 'js/views/today.js',
 ];
 
