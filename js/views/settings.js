@@ -5,7 +5,7 @@ import { t, relTime, getLang } from '../i18n.js';
 import { esc, icon, h, $, $$, modal, confirmBox, toast, cvar, spaceLabel, COLORS } from '../ui.js';
 import { GhError } from '../github.js';
 
-export const VERSION = '1.2.1';
+export const VERSION = '1.2.2';
 
 export function render(el, st, ctx) {
   const S = store.settings;

@@ -398,7 +398,10 @@ async function boot() {
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { applyLook(); if (state.route === 'appearance') render(); });
   shell(); bindShell(); keyboard(); swipes();
   addEventListener('hashchange', onRoute);
-  addEventListener('resize', () => scheduleRender());
+  // Перемальовуємо лише при зміні ширини. Висота змінюється, коли на телефоні відкривається клавіатура:
+  // перемальовування в цей момент нічого не дає, а на Android збиває фокус і клавіатура закривається.
+  let lastW = innerWidth;
+  addEventListener('resize', () => { if (innerWidth === lastW) return; lastW = innerWidth; scheduleRender(); });
   addEventListener('online', syncBtn); addEventListener('offline', syncBtn);
   store.on('change', () => { scheduleRender(); });
   store.on('sync', () => { syncBtn(); if (state.route === 'settings' && !$('.modal-wrap')) scheduleRender(); });

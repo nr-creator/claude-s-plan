@@ -1,6 +1,6 @@
 // Service Worker: зберігає файли застосунку на пристрої, щоб він відкривався без інтернету.
 // Запити до GitHub API не кешуються ніколи: дані живуть в IndexedDB.
-const VERSION = 'plan-v1.2.1';
+const VERSION = 'plan-v1.2.2';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',

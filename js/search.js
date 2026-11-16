@@ -66,7 +66,7 @@ function highlight(text, q) {
 export function openPalette(ctx, initial = '') {
   if ($('.palette-wrap')) return;
   const wrap = h(`<div class="palette-wrap"><div class="palette" role="dialog" aria-label="${esc(t('nav.search'))}">
-    <div class="pal-in">${icon('search')}<input placeholder="${esc(t('search.ph'))}" value="${esc(initial)}" autocomplete="off" spellcheck="false">${isNarrow() ? `<button class="btn-text" data-x>${t('misc.close')}</button>` : '<kbd>Esc</kbd>'}</div>
+    <div class="pal-in">${icon('search')}<input type="search" enterkeyhint="search" placeholder="${esc(t('search.ph'))}" value="${esc(initial)}" autocomplete="off" spellcheck="false">${isNarrow() ? `<button class="btn-text" data-x>${t('misc.close')}</button>` : '<kbd>Esc</kbd>'}</div>
     <div class="pal-res" role="listbox"></div>
     <div class="pal-foot">${esc(t('search.hint'))}</div></div></div>`);
   document.body.appendChild(wrap);
@@ -128,7 +128,8 @@ export function openPalette(ctx, initial = '') {
     res.innerHTML = html || `<p class="empty-t">${esc(t('search.empty'))}</p>`;
     const a = $('.act', res); a && a.scrollIntoView({ block: 'nearest' });
   };
-  const close = () => { wrap.remove(); document.removeEventListener('keydown', key, true); };
+  let closed = false;
+  const close = () => { closed = true; wrap.remove(); document.removeEventListener('keydown', key, true); };
   const run = it => {
     close();
     if (it.type === 'entry') ctx.open(openKey(it.e), { push: true });
@@ -152,4 +153,12 @@ export function openPalette(ctx, initial = '') {
   const x = $('[data-x]', wrap); if (x) x.onclick = close;
   draw();
   inp.focus(); inp.select();
+  // На Android фокус інколи зникає в момент, коли відкривається клавіатура: тоді клавіатура блимає і ховається.
+  // Перші пів секунди повертаємо фокус у поле, якщо його ніхто інший не забрав.
+  const t0 = Date.now();
+  inp.addEventListener('blur', () => setTimeout(() => {
+    if (closed || Date.now() - t0 > 1500) return;
+    const a = document.activeElement;
+    if (!a || a === document.body || a === wrap) inp.focus({ preventScroll: true });
+  }, 0));
 }
