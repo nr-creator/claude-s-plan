@@ -61,7 +61,8 @@ Read this first in a new chat. It is the working memory of the project: what exi
   - **Undo/redo** is our own snapshot history.
   - **Important invariant:** while re-rendering (`rendering` counter), ignore `focusout`. Otherwise stale DOM text is read back into the model (this was a real bug).
 - **Math** (`js/math.js`): our own LaTeX → MathML converter; browsers render MathML natively.
-- **Quick add** (`js/parse.js` + `js/qa.js`). Parses uk/en dates, times, ranges and repeats (`щопн`, `по пн, ср`, `every mon`), `!`/`[]` for tasks, `#name`. `#name` becomes a subject **only if that subject exists**; otherwise it is a hashtag kept in the text. Chips show what was recognized; clicking a chip ignores it. Space buttons: «Собі» / «Спільне».
+- **Colors.** `colorOf(e)` in `cal.js`: `e.color` → subject color → space color (`spaceColor`, 'accent'/'ink' = theme accent); `look.eventColorBy: 'space'` puts space above subject. Spaces have optional `icon` (`SPACE_ICONS`, `spaceIcon` in `ui.js`).
+- **Quick add** (`js/parse.js` + `js/qa.js`). Settings `qaMode` ('buttons'|'menu'), `qaLabels`, `qaHidden` (space ids). Buttons don't steal focus (pointerdown preventDefault). Parses uk/en dates, times, ranges and repeats (`щопн`, `по пн, ср`, `every mon`), `!`/`[]` for tasks, `#name`. `#name` becomes a subject **only if that subject exists**; otherwise it is a hashtag kept in the text. Chips show what was recognized; clicking a chip ignores it. Space buttons: «Собі» / «Спільне».
 - **Appearance** (`js/theme.js` + `js/views/appearance.js`). `settings.look` is turned into CSS variables on `<html>`. It includes presets, mode, OLED black, contrast, any accent (auto-lightened if invisible on the background), background tint, density, radius, UI font, scale (root font-size %), event style, hour height, weekends, week numbers, sidebar parts, quick-add mode (`top` or `key` = floating on N), and motion. All CSS sizes are in `rem` and vars, so scaling works.
 - **Other modules.**
   - `ics.js` + `zip.js` + `views/ics-ui.js`: Google Calendar import (.zip/.ics, time zones, RRULE/EXDATE/RECURRENCE-ID, dedupe by `icsUid`) and export.
@@ -79,6 +80,7 @@ node tests/unit-core.mjs      # parser, recurrence, front-matter, i18n plurals
 node tests/unit-md.mjs        # blocks <-> markdown, inline, math, tags
 node tests/unit-io.mjs        # merge3/diff3, ics, zip, qr (writes qr*.json for cv2 check)
 node tests/e2e-sync.mjs       # 3 "devices" against tests/fake-github.mjs (faithful Git Data API fake)
+node tests/e2e-spaces-ui.mjs   # space colors/icons, per-event color, quick-add buttons and their settings
 node tests/e2e-smoke.mjs e2e-editor.mjs e2e-mobile.mjs e2e-ics.mjs e2e-offline.mjs e2e-theme.mjs e2e-look.mjs e2e-look-ui.mjs e2e-folders.mjs
 ```
 

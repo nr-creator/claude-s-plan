@@ -11,7 +11,12 @@ export const isNarrow = () => matchMedia('(max-width: 760px)').matches;
 export const isTouch = () => matchMedia('(pointer: coarse)').matches;
 
 export const COLORS = ['teal', 'blue', 'indigo', 'violet', 'pink', 'red', 'orange', 'amber', 'olive', 'green', 'slate', 'brown'];
-export const cvar = c => `var(--c-${COLORS.includes(c) ? c : 'slate'})`;
+export const cvar = c => c === 'accent' ? 'var(--accent)' : `var(--c-${COLORS.includes(c) ? c : 'slate'})`;
+// Колір простору: 'accent' (або старе 'ink') — колір акценту теми
+export const spaceColor = s => !s || !s.color || s.color === 'ink' || s.color === 'accent' ? 'var(--accent)' : cvar(s.color);
+// Іконки, з яких можна вибрати значок простору
+export const SPACE_ICONS = ['lock', 'person', 'users', 'inbox', 'book', 'folder', 'target', 'pin', 'hash', 'calendar', 'notes', 'sun'];
+export const spaceIcon = s => s && SPACE_ICONS.includes(s.icon) ? s.icon : (s && s.kind === 'shared' ? 'users' : 'lock');
 
 // ---- Сповіщення внизу екрана ----
 export function toast(text, opts = {}) {

@@ -51,6 +51,7 @@ export function render(el, st, ctx) {
 
     <section class="card look-sec"><h3>${t('nav.calendar')}</h3>
       <div class="look-grid">
+        ${row(t('look.colorBy'), t('look.colorByHint'), seg('eventColorBy', [['subject', t('look.colorBy.subject')], ['space', t('look.colorBy.space')]]))}
         ${row(t('look.events'), '', seg('eventStyle', [['tinted', t('look.events.tinted')], ['solid', t('look.events.solid')], ['outline', t('look.events.outline')]]))}
         ${row(t('look.hour'), t('look.hourHint'), range('hourHeight', 32, 96, 4, 'px'))}
         ${row(t('look.weekends'), '', sw('showWeekends'))}

@@ -2,7 +2,7 @@
 import * as store from '../store.js';
 import { t, relTime } from '../i18n.js';
 import { openKey } from '../cal.js';
-import { esc, icon, h, $, $$, cvar, shortDate, isNarrow, popover, menu, confirmBox, toast, spaceLabel } from '../ui.js';
+import { esc, icon, h, $, $$, cvar, shortDate, isNarrow, popover, menu, confirmBox, toast, spaceLabel, spaceIcon } from '../ui.js';
 import { plainText, extractTags } from '../md.js';
 import { norm } from '../util.js';
 
@@ -187,7 +187,7 @@ export function folderPrompt(anchor, folder, parent, ctx, done) {
   const spaces = store.spaces;
   const parentF = parent && store.folderById(parent);
   const box = h(`<form class="pop-form col"><input value="${esc(folder ? folder.name : '')}" placeholder="${esc(t('folder.name'))}" aria-label="${esc(t('folder.name'))}">
-    ${!folder && !parentF && spaces.length > 1 ? `<div class="seg sm">${spaces.map((s, i) => `<button type="button" data-sp="${s.id}" class="${i === 0 ? 'on' : ''}">${icon(s.kind === 'shared' ? 'users' : 'lock')}${esc(spaceLabel(s))}</button>`).join('')}</div>` : ''}
+    ${!folder && !parentF && spaces.length > 1 ? `<div class="seg sm">${spaces.map((s, i) => `<button type="button" data-sp="${s.id}" class="${i === 0 ? 'on' : ''}">${icon(spaceIcon(s))}${esc(spaceLabel(s))}</button>`).join('')}</div>` : ''}
     <div class="row-end"><button class="btn primary sm">${folder ? t('misc.save') : t('folder.create')}</button></div></form>`);
   const p = popover(anchor, box, { sheet: !anchor || isNarrow() });
   const inp = $('input', box); setTimeout(() => { inp.focus(); inp.select(); }, 30);

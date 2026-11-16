@@ -18,6 +18,7 @@ const bump = (detail) => { version++; cache = {}; emit('change', detail); };
 const defaultSettings = () => ({
   lang: (navigator.language || 'uk').toLowerCase().startsWith('en') ? 'en' : 'uk',
   theme: 'auto', weekStart: 1, noteFont: 'sans', noteWidth: 'normal', view: 'agenda', notify: false, startHour: 7,
+  qaMode: 'buttons', qaLabels: false, qaHidden: [],
 });
 export let settings = defaultSettings();
 export let spaces = [];

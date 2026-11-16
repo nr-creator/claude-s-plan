@@ -5,7 +5,7 @@ import { itemsIn, rowHtml, openKey, toggleDone } from '../cal.js';
 import { describeRepeat } from '../recur.js';
 import { parseQuick } from '../parse.js';
 import { todayYmd, addDays, isoDow, timeToMin, minToTime } from '../util.js';
-import { esc, icon, h, $, $$, cvar, COLORS, modal, popover, menu, confirmBox, toast, spaceLabel, shortDate, dayLabel, pickDate } from '../ui.js';
+import { esc, icon, h, $, $$, cvar, COLORS, modal, popover, menu, confirmBox, toast, spaceLabel, shortDate, dayLabel, pickDate, spaceIcon } from '../ui.js';
 import { isNote } from './notes.js';
 import { plainText } from '../md.js';
 
@@ -28,7 +28,7 @@ export function render(el, st, ctx) {
       <div class="subj-meta">
         ${s.teacher ? `<span>${icon('person')}${esc(s.teacher)}</span>` : ''}${s.room ? `<span>${icon('location')}${esc(s.room)}</span>` : ''}
         ${s.link ? `<a href="${esc(/^https?:/.test(s.link) ? s.link : 'https://' + s.link)}" target="_blank" rel="noopener">${icon('link')}${esc(s.link.replace(/^https?:\/\//, '').slice(0, 40))}</a>` : ''}
-        <span>${icon(sp && sp.kind === 'shared' ? 'users' : 'lock')}${esc(spaceLabel(sp))}</span>
+        <span>${icon(spaceIcon(sp))}${esc(spaceLabel(sp))}</span>
         ${tasks.length ? `<span>${icon('todo')}${t('subj.progress', { d: doneTasks.length, n: tasks.length })}</span>` : ''}
       </div>
       <div class="subj-actions">
@@ -119,7 +119,7 @@ export function subjectForm(s, ctx, onCreated) {
     <div class="field"><span>${t('subj.color')}</span><div class="swatches">${COLORS.map(c => `<button type="button" class="sw ${c === s.color ? 'on' : ''}" data-c="${c}" style="--c:${cvar(c)}" aria-label="${c}"></button>`).join('')}</div></div>
     <div class="form-2"><label>${t('subj.teacher')}<input name="teacher" value="${esc(s.teacher || '')}"></label><label>${t('subj.room')}<input name="room" value="${esc(s.room || '')}"></label></div>
     <label>${t('subj.link')}<input name="link" value="${esc(s.link || '')}" placeholder="moodle, classroom, zoom…"></label>
-    ${isNew && store.spaces.length > 1 ? `<div class="field"><span>${t('subj.space')}</span><div class="seg">${store.spaces.map(x => `<button type="button" data-sp="${x.id}" class="${x.id === s.space ? 'on' : ''}">${icon(x.kind === 'shared' ? 'users' : 'lock')}${esc(spaceLabel(x))}</button>`).join('')}</div></div>` : ''}
+    ${isNew && store.spaces.length > 1 ? `<div class="field"><span>${t('subj.space')}</span><div class="seg">${store.spaces.map(x => `<button type="button" data-sp="${x.id}" class="${x.id === s.space ? 'on' : ''}">${icon(spaceIcon(x))}${esc(spaceLabel(x))}</button>`).join('')}</div></div>` : ''}
     <div class="row-end"><button type="button" class="btn" data-cancel>${t('misc.cancel')}</button><button class="btn primary">${isNew ? t('subj.create') : t('misc.save')}</button></div>
   </form>`);
   let color = s.color, space = s.space;

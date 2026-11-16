@@ -4,7 +4,7 @@ import { t, fmtDate } from './i18n.js';
 import { parseQuick } from './parse.js';
 import { describeRepeat } from './recur.js';
 import { todayYmd } from './util.js';
-import { esc, icon, h, $, $$, toast, cvar, spaceLabel, dayLabel, isNarrow, locale } from './ui.js';
+import { esc, icon, h, $, $$, toast, cvar, spaceLabel, dayLabel, isNarrow, locale, spaceIcon, spaceColor, menu } from './ui.js';
 import { openKey } from './cal.js';
 
 export function mountQuickAdd(host, ctx) {
@@ -23,22 +23,46 @@ export function mountQuickAdd(host, ctx) {
   const placeholder = () => { inp.placeholder = isNarrow() ? t('qa.placeholderShort') : t('qa.placeholder'); };
   placeholder();
 
-  // Простір за замовчуванням: простір предмета, якщо предмет обрано; інакше — особистий
-  const targets = () => store.spaces.slice(0, 3);
+  // Простори в рядку: усі, крім прихованих у налаштуваннях (хоча б один лишається завжди)
+  const targets = () => {
+    const hid = new Set(store.settings.qaHidden || []);
+    const v = store.spaces.filter(s => !hid.has(s.id));
+    return v.length ? v : [store.personalSpace()];
+  };
+  // Простір для Enter: простір предмета, якщо предмет обрано; інакше — перший видимий особистий
   const defaultTarget = () => {
     if (chosen) return chosen;
     const sid = parsed && parsed.subject && parsed.subject.id;
     const s = sid && store.subjectById(sid);
     if (s) return s.space;
     if (preset && preset.space) return preset.space;
-    return store.personalSpace().id;
+    const ts = targets();
+    return (ts.find(x => x.kind === 'personal') || ts[0]).id;
   };
 
+  // Кнопка простору: тло — колір простору, значок — його значок, підпис — за бажанням
+  const btnStyle = s => { const c = spaceColor(s); return `--c:${c};--on:${c === 'var(--accent)' ? 'var(--on-accent)' : 'var(--surface)'}`; };
+  const label = s => s.name || (s.kind === 'shared' ? t('qa.shared') : t('qa.private'));
   function drawBtns() {
     const ts = targets();
     const def = defaultTarget();
-    if (ts.length < 2) { btns.innerHTML = `<button class="qa-go on" data-space="${ts[0].id}" aria-label="${esc(t('qa.add'))}">${icon('plus')}<span>${t('qa.add')}</span></button>`; return; }
-    btns.innerHTML = ts.map(s => `<button type="button" class="qa-go ${s.id === def ? 'on' : ''} ${s.kind}" data-space="${s.id}" title="${esc(spaceLabel(s))}">${icon(s.kind === 'shared' ? 'users' : 'lock')}<span>${esc(s.kind === 'shared' ? (s.name || t('qa.shared')) : t('qa.private'))}</span></button>`).join('');
+    const S = store.settings;
+    btns.classList.toggle('labels', !!S.qaLabels);
+    if (store.spaces.length < 2 || ts.length < 2) {
+      const s = ts[0];
+      btns.innerHTML = `<button type="button" class="qa-go" data-space="${s.id}" style="${btnStyle(s)}" aria-label="${esc(t('qa.add'))}" title="${esc(t('qa.add'))}">${icon('plus')}<span>${t('qa.add')}</span></button>`;
+      return;
+    }
+    if (S.qaMode === 'menu') {
+      const s = store.space(def) || ts[0];
+      btns.innerHTML = `<button type="button" class="qa-go" data-qa-menu style="${btnStyle(s)}" aria-haspopup="menu" aria-label="${esc(t('qa.where'))}" title="${esc(t('qa.where'))}">${icon('plus')}<span>${t('qa.add')}</span>${icon('down', 'qa-caret')}</button>`;
+      return;
+    }
+    btns.innerHTML = ts.map(s => `<button type="button" class="qa-go ${s.id === def ? 'def' : ''}" data-space="${s.id}" style="${btnStyle(s)}" title="${esc(t('qa.addTo', { s: spaceLabel(s) }))}" aria-label="${esc(t('qa.addTo', { s: spaceLabel(s) }))}">${icon(spaceIcon(s))}<span>${esc(label(s))}</span></button>`).join('');
+  }
+  function spaceMenuQa(btn) {
+    const def = defaultTarget();
+    menu(btn, [{ header: t('qa.where') }, ...targets().map(s => ({ label: spaceLabel(s), icon: spaceIcon(s), active: s.id === def, act: () => { chosen = null; submit(s.id); } }))], { align: 'right' });
   }
 
   function drawChips() {
@@ -117,11 +141,15 @@ export function mountQuickAdd(host, ctx) {
   el.addEventListener('submit', e => { e.preventDefault(); submit(defaultTarget()); });
   el.addEventListener('click', e => {
     const g = e.target.closest('[data-space]'); if (g) { e.preventDefault(); chosen = null; submit(g.dataset.space); return; }
+    const m = e.target.closest('[data-qa-menu]'); if (m) { e.preventDefault(); spaceMenuQa(m); return; }
     const c = e.target.closest('[data-ign]'); if (c) { ignore.add(c.dataset.ign); drawChips(); inp.focus(); return; }
     if (e.target.closest('[data-unpreset]')) { preset = null; drawChips(); inp.focus(); }
   });
   addEventListener('resize', placeholder);
+  // Натискання кнопки не забирає фокус із поля: клавіатура на телефоні лишається відкритою
+  btns.addEventListener('pointerdown', e => { if (e.target.closest('button')) e.preventDefault(); });
   store.on('spaces', drawChips);
+  store.on('settings', drawChips);
   drawChips();
 
   return {

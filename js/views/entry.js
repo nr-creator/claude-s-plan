@@ -7,8 +7,9 @@ import { describeRepeat } from '../recur.js';
 import { wikiTargets } from '../md.js';
 import { tagsOf, allTags, folderPrompt } from './notes.js';
 import { isoDow, todayYmd, addDays, debounce, timeToMin, minToTime, norm } from '../util.js';
-import { esc, icon, h, $, $$, popover, menu, pickDate, toast, confirmBox, cvar, COLORS, spaceLabel, shortDate, dayLabel, isNarrow, locale } from '../ui.js';
+import { esc, icon, h, $, $$, popover, menu, pickDate, toast, confirmBox, cvar, COLORS, spaceLabel, shortDate, dayLabel, isNarrow, locale, spaceIcon } from '../ui.js';
 import { compressImage } from '../image.js';
+import { colorOf } from '../cal.js';
 
 export function openPanel(host, key, ctx) {
   const [spaceId, id, occ] = key.split('|');
@@ -30,13 +31,13 @@ export function openPanel(host, key, ctx) {
     e = store.entry(spaceId, id) || e;
     const s = store.subjectById(e.subject);
     const sp = store.space(e.space);
-    el.style.setProperty('--c', s ? cvar(s.color) : 'var(--accent)');
+    el.style.setProperty('--c', colorOf(e));
     const cur = target();
     el.innerHTML = `
       <header class="pn-h">
         <button class="icon-btn" data-pn="close" aria-label="${t('entry.close')}" title="Esc">${icon(isNarrow() ? 'left' : 'x')}</button>
         <span class="grow"></span>
-        <span class="pn-space ${sp && sp.kind === 'shared' ? 'shared' : ''}">${icon(sp && sp.kind === 'shared' ? 'users' : 'lock')}${esc(spaceLabel(sp))}</span>
+        <span class="pn-space ${sp && sp.kind === 'shared' ? 'shared' : ''}">${icon(spaceIcon(sp))}${esc(spaceLabel(sp))}</span>
         <button class="icon-btn" data-pn="full" aria-label="${t('entry.openFull')}" title="${t('entry.openFull')}">${icon(ctx.isFull() ? 'collapse' : 'expand')}</button>
         <button class="icon-btn" data-pn="more" aria-label="${t('nav.more')}">${icon('more')}</button>
       </header>
@@ -113,7 +114,8 @@ export function openPanel(host, key, ctx) {
       e.date ? chip('time', 'clock', timeL, !!e.time) : '',
       e.date ? chip('repeat', 'repeat', e.repeat ? describeRepeat(e.repeat, t, locale()) : t('entry.noRepeat'), !!e.repeat) : '',
       `<button class="prop ${s ? 'on subj' : ''}" data-prop="subject" ${s ? `style="--c:${cvar(s.color)}"` : ''}>${s ? '<i class="dot"></i>' : icon('book')}<span>${esc(s ? s.name : t('entry.noSubject'))}</span></button>`,
-      store.spaces.length > 1 ? chip('space', sp && sp.kind === 'shared' ? 'users' : 'lock', spaceLabel(sp), true) : '',
+      e.date ? `<button class="prop ${e.color ? 'on' : ''} pcolor" data-prop="color" style="--c:${colorOf(e)}"><i class="dot"></i><span>${esc(e.color ? t('entry.color') : t('entry.colorAuto'))}</span></button>` : '',
+      store.spaces.length > 1 ? chip('space', spaceIcon(sp), spaceLabel(sp), true) : '',
       (() => { const f = store.folderById(e.folder); return chip('folder', 'folder', f ? store.folderPath(f.id).map(x => x.name).join(' / ') : t('entry.noFolder'), !!f); })(),
       chip('location', 'location', e.location || t('entry.location'), !!e.location),
     ];
@@ -152,6 +154,7 @@ export function openPanel(host, key, ctx) {
     if (k === 'repeat') repeatMenu(btn, e, upd);
     if (k === 'subject') subjectMenu(btn, e, upd);
     if (k === 'space') spaceMenu(btn, e);
+    if (k === 'color') colorPop(btn, e, upd);
     if (k === 'folder') {
       const fs = store.folders();
       const depth = f => store.folderPath(f.id).length - 1;
@@ -244,9 +247,17 @@ export function openPanel(host, key, ctx) {
       { label: t('subj.new'), icon: 'plus', act: () => ctx.newSubject(btn, s => upd({ subject: s.id })) },
     ]);
   }
+  // Колір події: «Авто» бере колір предмета або простору; або один із 12 кольорів
+  function colorPop(btn, e, upd) {
+    const auto = colorOf({ ...e, color: null });
+    const box = h(`<div class="color-pop"><button type="button" class="color-auto ${e.color ? '' : 'on'}" data-col="" style="--c:${auto}"><i class="dot"></i><span>${esc(t('entry.colorAutoLong'))}</span>${e.color ? '' : icon('check')}</button>
+      <div class="swatches">${COLORS.map(c => `<button type="button" class="sw ${e.color === c ? 'on' : ''}" data-col="${c}" style="--c:${cvar(c)}" aria-label="${c}"></button>`).join('')}</div></div>`);
+    const p = popover(btn, box);
+    box.addEventListener('click', ev => { const b = ev.target.closest('[data-col]'); if (!b) return; p.close(); upd({ color: b.dataset.col || null }); });
+  }
   function spaceMenu(btn, e) {
     menu(btn, store.spaces.map(s => ({
-      label: spaceLabel(s), icon: s.kind === 'shared' ? 'users' : 'lock', active: s.id === e.space,
+      label: spaceLabel(s), icon: spaceIcon(s), active: s.id === e.space,
       act: async () => {
         if (s.id === e.space) return;
         if (s.kind === 'shared' && !(await confirmBox(t('entry.shareWarn'), t('entry.shareWarnOk')))) return;
@@ -311,7 +322,7 @@ export function openPanel(host, key, ctx) {
       if (title && document.activeElement !== title && title.value !== (e.title || '')) title.value = e.title || '';
       const cur = target();
       if (editor && cur && !editor.isFocused() && !editor.hasPending() && (cur.body || '') !== editor.getMarkdown() && curBefore && curBefore.updatedAt !== cur.updatedAt) editor.setMarkdown(cur.body || '');
-      const s = store.subjectById(e.subject); el.style.setProperty('--c', s ? cvar(s.color) : 'var(--accent)');
+      el.style.setProperty('--c', colorOf(e));
       footer(); outline();
     },
     close() {

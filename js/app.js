@@ -4,7 +4,7 @@ import * as sync from './sync.js';
 import { t, setLang, getLang, monthName, fmtDate } from './i18n.js';
 import { todayYmd, addDays, timeToMin, nowMin } from './util.js';
 import { icon } from './icons.js';
-import { $, $$, h, esc, toast, popover, menu, isNarrow, dateGrid, cvar, spaceLabel, dayLabel, closePops } from './ui.js';
+import { $, $$, h, esc, toast, popover, menu, isNarrow, dateGrid, cvar, spaceLabel, dayLabel, closePops, spaceIcon, spaceColor } from './ui.js';
 import { mountQuickAdd } from './qa.js';
 import { openPalette } from './search.js';
 import { itemsIn, toggleDone, openKey } from './cal.js';
@@ -172,7 +172,7 @@ function rail() {
   const subs = store.subjects();
   $('#subjList').innerHTML = subs.map(s => `<a href="#/subject/${s.id}" class="${state.route === 'subject' && state.subjectId === s.id ? 'on' : ''}" style="--c:${cvar(s.color)}"><i class="dot"></i><span>${esc(s.name)}</span>${store.space(s.space) && store.space(s.space).kind === 'shared' ? icon('users', 'sm') : ''}</a>`).join('') || `<button class="btn-text sm" data-act="new-subject">${icon('plus')}${t('subj.new')}</button>`;
   const sec = $('#spacesSec');
-  sec.innerHTML = store.spaces.length > 1 ? `<div class="rail-h"><span>${t('nav.spaces')}</span></div>${store.spaces.map(s => `<label class="space-tg" style="--c:${cvar(s.color || 'slate')}"><input type="checkbox" data-spvis="${s.id}" ${store.hiddenSpaces.has(s.id) ? '' : 'checked'}><span class="box"></span>${icon(s.kind === 'shared' ? 'users' : 'lock')}<span>${esc(spaceLabel(s))}</span></label>`).join('')}` : '';
+  sec.innerHTML = store.spaces.length > 1 ? `<div class="rail-h"><span>${t('nav.spaces')}</span></div>${store.spaces.map(s => `<label class="space-tg" style="--c:${spaceColor(s)}"><input type="checkbox" data-spvis="${s.id}" ${store.hiddenSpaces.has(s.id) ? '' : 'checked'}><span class="box"></span>${icon(spaceIcon(s))}<span>${esc(spaceLabel(s))}</span></label>`).join('')}` : '';
 }
 
 function syncBtn() {
@@ -190,7 +190,7 @@ function syncBtn() {
 }
 function syncPopover(anchor) {
   const st = sync.status();
-  const body = h(`<div class="sync-pop">${store.spaces.map(s => { const x = st[s.id] || {}; return `<div class="sp-line"><b>${icon(s.kind === 'shared' ? 'users' : 'lock')}${esc(spaceLabel(s))}</b><span class="${x.status === 'error' ? 'err' : 'muted'}">${s.remote ? (x.status === 'error' ? esc(setView.errText(x.error)) : x.status === 'syncing' ? t('sync.syncing') : x.status === 'offline' ? t('sync.offline') : x.lastSync ? t('sync.last', { t: new Date(x.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }) : t('sync.never')) : t('space.local')}${x.pending ? ' · ' + t('sync.pending', { n: x.pending }) : ''}</span></div>`; }).join('')}
+  const body = h(`<div class="sync-pop">${store.spaces.map(s => { const x = st[s.id] || {}; return `<div class="sp-line"><b>${icon(spaceIcon(s))}${esc(spaceLabel(s))}</b><span class="${x.status === 'error' ? 'err' : 'muted'}">${s.remote ? (x.status === 'error' ? esc(setView.errText(x.error)) : x.status === 'syncing' ? t('sync.syncing') : x.status === 'offline' ? t('sync.offline') : x.lastSync ? t('sync.last', { t: new Date(x.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }) : t('sync.never')) : t('space.local')}${x.pending ? ' · ' + t('sync.pending', { n: x.pending }) : ''}</span></div>`; }).join('')}
     <div class="row-end">${store.spaces.some(s => s.remote) ? `<button class="btn primary sm" data-s="now">${icon('sync')}${t('sync.now')}</button>` : `<button class="btn primary sm" data-s="connect">${t('first.connect')}</button>`}<button class="btn sm" data-s="conf">${t('conf.title')}</button></div></div>`);
   const p = popover(anchor, body, { align: 'right' });
   body.onclick = e => { const b = e.target.closest('[data-s]'); if (!b) return; p.close(); if (b.dataset.s === 'now') sync.syncAll(); if (b.dataset.s === 'conf') ctx.go('#/conflicts'); if (b.dataset.s === 'connect') { ctx.go('#/settings'); } };

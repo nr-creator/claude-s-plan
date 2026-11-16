@@ -3,7 +3,7 @@ import * as store from './store.js';
 import { occurrences } from './recur.js';
 import { diffDays, addDays, timeToMin, todayYmd, nowMin } from './util.js';
 import { t } from './i18n.js';
-import { esc, icon, cvar, fmtRange, spaceLabel } from './ui.js';
+import { esc, icon, cvar, fmtRange, spaceLabel, spaceColor, spaceIcon, COLORS } from './ui.js';
 
 export const openKey = (e, occ) => `${e.space}|${e.id}${occ ? '|' + occ : ''}`;
 
@@ -51,7 +51,21 @@ export function layoutDay(items) {
 }
 
 export function subjectOf(e) { return store.subjectById(e.subject); }
-export function colorOf(e) { const s = subjectOf(e); return s ? cvar(s.color) : 'var(--accent)'; }
+// Колір запису: власний колір → колір предмета → колір простору.
+// У «Вигляді» можна поставити простір вище за предмет, щоб особисте і спільне завжди розрізнялися.
+export function colorOf(e) {
+  if (e.color && COLORS.includes(e.color)) return cvar(e.color);
+  const sp = store.space(e.space);
+  const s = subjectOf(e);
+  if (s && !(store.settings.look.eventColorBy === 'space' && store.spaces.length > 1)) return cvar(s.color);
+  return spaceColor(sp);
+}
+// Значок простору біля події: лише для неособистих просторів, коли їх кілька
+export function spaceMark(e) {
+  const sp = store.space(e.space);
+  if (!sp || sp.kind !== 'shared' || store.spaces.length < 2) return '';
+  return `<span class="ev-sp" title="${esc(spaceLabel(sp))}">${icon(spaceIcon(sp))}</span>`;
+}
 
 // Рядок у списках (агенда, предмет, пошук)
 export function rowHtml(it, opts = {}) {
@@ -67,7 +81,7 @@ export function rowHtml(it, opts = {}) {
     <span class="row-main"><span class="row-title">${esc(e.title || t('entry.untitled'))}</span>
     ${(s || e.location || opts.date || it.note) ? `<span class="row-meta">${opts.date ? `<span>${esc(opts.date)}</span>` : ''}${s ? `<span class="subj-tag" style="--c:${cvar(s.color)}">${esc(s.name)}</span>` : ''}${e.location ? `<span>${esc(e.location)}</span>` : ''}${it.note ? `<span class="has-note">${icon('notes')}${t('entry.classNote')}</span>` : ''}</span>` : ''}
     </span>
-    ${shared ? `<span class="row-space" title="${esc(spaceLabel(sp))}">${icon('users')}</span>` : ''}
+    ${shared ? `<span class="row-space" title="${esc(spaceLabel(sp))}">${icon(spaceIcon(sp))}</span>` : ''}
     ${e.repeat ? `<span class="row-rep" title="${t('entry.repeat')}">${icon('repeat')}</span>` : ''}
   </div>`;
 }

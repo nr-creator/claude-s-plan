@@ -26,7 +26,7 @@ export const DEFAULTS = {
   preset: 'standard', mode: 'auto', black: false, contrast: false, accent: '#3b82f6', tint: 'neutral',
   density: 'comfortable', radius: 'soft', font: 'system', scale: 100, eventStyle: 'tinted', hourHeight: 52,
   showWeekends: true, weekNumbers: false, sideMini: true, sideSubjects: true, sideSpaces: true, sideCollapsed: false,
-  quickAdd: 'top', motion: true, subjectColors: 'vivid',
+  quickAdd: 'top', motion: true, eventColorBy: 'subject', subjectColors: 'vivid',
 };
 
 // Пресети: стартова точка, яку далі можна підкрутити

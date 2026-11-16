@@ -2,7 +2,7 @@
 import * as store from '../store.js';
 import { t, fmtDate, monthName, fmtDow } from '../i18n.js';
 import { todayYmd, addDays, addMonths, startOfWeek, startOfMonth, timeToMin, minToTime, nowMin, diffDays, isoDow } from '../util.js';
-import { itemsIn, itemsOn, layoutDay, rowHtml, colorOf } from '../cal.js';
+import { itemsIn, itemsOn, layoutDay, rowHtml, colorOf, spaceMark } from '../cal.js';
 import { esc, icon, isNarrow, fmtRange, dayLabel, $, $$ } from '../ui.js';
 
 let HH = 52; // висота години в пікселях (з налаштувань вигляду)
@@ -62,14 +62,14 @@ function gridHtml(from, to, items, view) {
     const list = itemsOn(d, items);
     head += `<button class="tg-day ${d === today ? 'today' : ''} ${isoDow(d) >= 6 ? 'we' : ''}" data-goday="${d}"><span class="tg-dow">${esc(fmtDow(d))}</span><span class="tg-num">${+d.slice(8)}</span></button>`;
     const allDay = list.filter(it => !it.e.time);
-    all += `<div class="tg-allcell" data-day="${d}">${allDay.map(it => `<div class="chip-ev ${it.done ? 'done' : ''} ${it.e.task ? 'task' : ''}" data-open="${esc(it.key)}" style="--c:${colorOf(it.e)}">${it.e.task ? `<span class="mini-check ${it.done ? 'on' : ''}" data-check="${esc(it.key)}"></span>` : ''}${esc(it.e.title || t('entry.untitled'))}</div>`).join('')}</div>`;
+    all += `<div class="tg-allcell" data-day="${d}">${allDay.map(it => `<div class="chip-ev ${it.done ? 'done' : ''} ${it.e.task ? 'task' : ''}" data-open="${esc(it.key)}" style="--c:${colorOf(it.e)}">${it.e.task ? `<span class="mini-check ${it.done ? 'on' : ''}" data-check="${esc(it.key)}"></span>` : ''}${spaceMark(it.e)}${esc(it.e.title || t('entry.untitled'))}</div>`).join('')}</div>`;
     const evs = layoutDay(list);
     let col = `<div class="tg-col ${d === today ? 'today' : ''} ${isoDow(d) >= 6 ? 'we' : ''}" data-day="${d}">`;
     for (const ev of evs) {
       const short = ev.e - ev.s < 45;
       col += `<div class="ev ${short ? 'short' : ''} ${ev.it.done ? 'done' : ''} ${ev.it.e.repeat ? 'rep' : ''}" data-open="${esc(ev.it.key)}" data-s="${ev.s}" data-e="${ev.e}"
         style="--c:${colorOf(ev.it.e)};top:${ev.s / 60 * HH}px;height:${Math.max(18, (ev.e - ev.s) / 60 * HH - 2)}px;left:calc(${ev.col} * 100% / ${ev.n});width:calc(100% / ${ev.n} - 3px)">
-        <span class="ev-t">${esc(ev.it.e.title || t('entry.untitled'))}</span><span class="ev-m">${esc(fmtRange(ev.it.e.time, ev.it.e.end))}${ev.it.e.location ? ' · ' + esc(ev.it.e.location) : ''}</span>
+        <span class="ev-t">${spaceMark(ev.it.e)}${esc(ev.it.e.title || t('entry.untitled'))}</span><span class="ev-m">${esc(fmtRange(ev.it.e.time, ev.it.e.end))}${ev.it.e.location ? ' · ' + esc(ev.it.e.location) : ''}</span>
         ${ev.it.note ? `<span class="ev-note">${icon('notes')}</span>` : ''}${ev.it.e.repeat ? '' : '<span class="ev-resize"></span>'}</div>`;
     }
     if (d === today) col += `<div class="now-line" style="top:${nowMin() / 60 * HH}px"></div>`;
@@ -187,7 +187,7 @@ function monthHtml(cursor, from, items, st) {
         <button class="mg-n" data-goday="${d}">${+d.slice(8)}</button>`;
       if (narrow) html += `<div class="mg-dots">${list.slice(0, 4).map(it => `<i style="--c:${colorOf(it.e)}"></i>`).join('')}</div>`;
       else {
-        html += list.slice(0, max).map(it => `<div class="chip-ev ${it.done ? 'done' : ''} ${it.e.time ? 'timed' : ''}" draggable="${!it.e.repeat}" data-open="${esc(it.key)}" style="--c:${colorOf(it.e)}">${it.e.time ? `<b>${it.e.time}</b> ` : ''}${esc(it.e.title || t('entry.untitled'))}</div>`).join('');
+        html += list.slice(0, max).map(it => `<div class="chip-ev ${it.done ? 'done' : ''} ${it.e.time ? 'timed' : ''}" draggable="${!it.e.repeat}" data-open="${esc(it.key)}" style="--c:${colorOf(it.e)}">${spaceMark(it.e)}${it.e.time ? `<b>${it.e.time}</b> ` : ''}${esc(it.e.title || t('entry.untitled'))}</div>`).join('');
         if (list.length > max) html += `<button class="mg-more" data-goday="${d}">${t('cal.more', { n: list.length - max })}</button>`;
       }
       html += '</div>';

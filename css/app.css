@@ -208,10 +208,17 @@ body.qa-hidden .qa-host:not(.show) { display: none; }
 .qa-box > .ic { color: var(--muted); }
 .qa-in { border: 0 !important; box-shadow: none !important; background: transparent !important; padding: 0 !important; height: var(--ctl) !important; min-width: 0; flex: 1; font-size: .9375rem !important; }
 .qa-btns { display: flex; gap: 4px; flex: none; }
-.qa-go { display: inline-flex; align-items: center; gap: 6px; height: calc(var(--ctl) - 2px); padding: 0 11px; border-radius: var(--r-sm); font-weight: 600; font-size: .8125rem; color: var(--ink-2); background: var(--surface-2); transition: background .12s; }
-.qa-go:hover { background: var(--surface-3); }
-.qa-go.on { background: var(--accent); color: var(--on-accent); }
-.qa-go .ic { width: 15px; height: 15px; }
+/* Кнопки просторів: кожна у кольорі свого простору. Без підписів — квадратні зі значком */
+.qa-go { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: calc(var(--ctl) - 2px); min-width: calc(var(--ctl) - 2px); padding: 0 9px; border-radius: var(--r-sm); font-weight: 600; font-size: .8125rem; color: var(--on, var(--on-accent)); background: var(--c, var(--accent)); transition: filter .12s, box-shadow .12s; }
+.qa-go:hover { filter: brightness(1.08); }
+.qa-go:active { filter: brightness(.94); }
+.qa-go .ic { width: 16px; height: 16px; }
+.qa-go .qa-caret { width: 13px; height: 13px; margin-left: -2px; opacity: .85; }
+.qa-btns:not(.labels) .qa-go { padding: 0; }
+.qa-btns:not(.labels) .qa-go span { display: none; }
+.qa-btns:not(.labels) .qa-go:has(.qa-caret) { padding: 0 6px 0 8px; gap: 3px; }
+/* Куди піде Enter — тонке кільце; видно лише там, де є клавіатура */
+@media (hover: hover) and (pointer: fine) { .qa-go.def { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--c); } }
 .qa-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 2px 0; }
 .qa:not(.has-chips) .qa-chips { display: none; }
 .qa-chips .chip em { font-style: normal; color: var(--muted); }
@@ -315,6 +322,18 @@ body.qa-hidden .qa-host:not(.show) { display: none; }
 .chip-ev b { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--muted); }
 .chip-ev:hover { background: color-mix(in oklab, var(--c) 24%, var(--surface)); }
 .chip-ev.done { text-decoration: line-through; opacity: .6; }
+/* Значок спільного простору на події */
+.ev-sp { display: inline-flex; vertical-align: -2px; margin-right: 3px; opacity: .8; flex: none; }
+.ev-sp .ic { width: 12px; height: 12px; }
+/* Вибір кольору події */
+.color-pop { padding: 10px; display: flex; flex-direction: column; gap: 10px; min-width: 240px; }
+.color-pop .swatches { display: grid; grid-template-columns: repeat(6, 28px); gap: 10px; }
+.color-auto { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--r-sm); text-align: left; font-size: .875rem; }
+.color-auto:hover { background: var(--hover); }
+.color-auto .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--c); flex: none; }
+.color-auto span { flex: 1; }
+.color-auto .ic { width: 16px; height: 16px; color: var(--accent-text); }
+.prop.pcolor .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
 /* Стилі подій: суцільний і контурний */
 :root[data-events="solid"] .ev, :root[data-events="solid"] .chip-ev:not(.timed) { background: var(--c); color: #fff; border-left-color: color-mix(in oklab, var(--c) 70%, #000); }
 :root[data-events="solid"] .ev .ev-m { color: rgba(255, 255, 255, .85); }
@@ -527,6 +546,14 @@ body.panel-full .pn-outline:not(:empty) { display: block; }
 .set-row select { width: auto; }
 .set-row.chk { cursor: pointer; }
 .spaces { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.qa-sp-h { border-bottom: 0; padding-bottom: 4px; }
+.qa-sp-list { display: flex; flex-direction: column; gap: 6px; }
+.qa-sp { display: flex; align-items: center; gap: 10px; padding: 6px 0; flex-wrap: wrap; }
+.qa-sp > b { flex: 1; min-width: 100px; font-weight: 550; font-size: .875rem; }
+.qa-sp .qa-go { padding: 0; pointer-events: none; }
+.qa-sp .btn .dot { width: 10px; height: 10px; }
+.icon-pop { display: grid; grid-template-columns: repeat(6, 36px); gap: 4px; padding: 8px; }
+.icon-pop .icon-btn.on { background: var(--accent-soft); color: var(--accent-text); }
 .space-card { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: var(--r); flex-wrap: wrap; }
 .space-sw { width: 4px; align-self: stretch; border-radius: 4px; background: var(--c); }
 .space-main { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 2px; font-size: .8125rem; }
@@ -781,7 +808,6 @@ body.kb-open .pn-wrap { padding-bottom: 200px; }
   body[data-route="settings"] .qa-host, body[data-route="appearance"] .qa-host { display: none; }
   .qa-box { box-shadow: var(--shadow); border-color: var(--line-2); }
   .qa-box > .ic { display: none; }
-  .qa-go { padding: 0 10px; }
   .qa-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; order: -1; padding: 0 0 6px; }
   .qa { display: flex; flex-direction: column; }
   .tabs { position: fixed; left: 0; right: 0; bottom: 0; height: calc(var(--tabs) + var(--safe-b)); padding-bottom: var(--safe-b); background: color-mix(in oklab, var(--surface) 92%, transparent); backdrop-filter: blur(14px); border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(5, 1fr); z-index: 31; }
