@@ -1,8 +1,9 @@
 {
-  "name": "План — календар і конспекти",
-  "short_name": "План",
+  "name": "Claude's Plan",
+  "short_name": "Claude's Plan",
   "description": "Календар, розклад занять і конспекти. Працює без інтернету, синхронізується через GitHub.",
   "lang": "uk",
+  "id": "./",
   "start_url": "./#/today",
   "scope": "./",
   "display": "standalone",

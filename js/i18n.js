@@ -1,6 +1,6 @@
 // Дві мови інтерфейсу. t('ключ', {параметри}). Множина: форми через "|" (uk — 3 форми, en — 2), параметр n.
 const uk = {
-  'app.name': 'План',
+  'app.name': "Claude's Plan",
   'notes.unfiled': 'Без папки', 'notes.folders': 'Папки', 'notes.tags': 'Теги', 'notes.filter': 'Фільтр', 'notes.sort': 'Сортування',
   'notes.grid': 'Картки', 'notes.list': 'Список', 'notes.sortCreated': 'Нещодавно створені', 'notes.tagEmpty': 'Нотаток із цим тегом немає.',
   'folder.new': 'Нова папка', 'folder.empty': 'Папка порожня. Створи нотатку тут або перетягни сюди наявну.',
@@ -146,7 +146,7 @@ const uk = {
 };
 
 const en = {
-  'app.name': 'Plan',
+  'app.name': "Claude's Plan",
   'notes.unfiled': 'Unfiled', 'notes.folders': 'Folders', 'notes.tags': 'Tags', 'notes.filter': 'Filter', 'notes.sort': 'Sort',
   'notes.grid': 'Cards', 'notes.list': 'List', 'notes.sortCreated': 'Recently created', 'notes.tagEmpty': 'No notes with this tag.',
   'folder.new': 'New folder', 'folder.empty': 'This folder is empty. Create a note here or drag one in.',
